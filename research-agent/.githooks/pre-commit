@@ -7,13 +7,13 @@ PROJECT_ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
 cd "$PROJECT_ROOT"
 
 printf 'Running Biome checks...\n'
-npx biome check .
+bunx biome check .
 
 printf 'Running ESLint complexity gate...\n'
-npm run lint:complexity
+bun run lint:complexity
 
 printf 'Running typecheck...\n'
-npm run typecheck
+bun run typecheck
 
 printf 'Running test suite...\n'
-npm run test
+bun run test

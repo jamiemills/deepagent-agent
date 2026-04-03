@@ -36,7 +36,7 @@ The codebase is split into:
 
 ## Prerequisites
 
-- Node.js 20+
+- Bun 1.3+
 - a Brave Search API key in `.env`
 - Vertex AI credentials for Gemini
 - Temporal if you want hosted durable execution
@@ -44,19 +44,19 @@ The codebase is split into:
 ## Install
 
 ```bash
-npm install
+bun install
 ```
 
 Useful validation commands:
 
 ```bash
-npm run typecheck
-npm run lint
-npm run test
-npm run format
+bun run typecheck
+bun run lint
+bun run test
+bun run format
 ```
 
-This project uses Biome for linting and formatting. When installed inside a Git repository, `npm install` runs the `prepare` script and configures `core.hooksPath` to [`.githooks`](/Users/jamie.mills/c9h/code/deepagent-agent/research-agent/.githooks), so the pre-commit hook runs `biome check` and `npm run typecheck`.
+This project uses Biome for linting and formatting. When installed inside a Git repository, `bun install` runs the `prepare` script and configures `core.hooksPath` to [`.githooks`](/Users/jamie.mills/c9h/code/deepagent-agent/research-agent/.githooks), so the pre-commit hook runs `bunx biome check`, `bun run lint:complexity`, `bun run typecheck`, and `bun run test`.
 
 ## Configure
 
@@ -89,13 +89,13 @@ The app constructs a Vertex AI-backed `ChatGoogle` model explicitly with `platfo
 Run a local research job directly:
 
 ```bash
-npm run research -- "Research the current state of the UK small modular reactor market."
+bun run research -- "Research the current state of the UK small modular reactor market."
 ```
 
 Or explicitly:
 
 ```bash
-npm run cli -- local "Research the UK small modular reactor market and write a report."
+bun run cli -- local "Research the UK small modular reactor market and write a report."
 ```
 
 The CLI prints a run record as JSON. Canonical artifacts are written under `.data/artifacts/<run-id>/`.
@@ -105,43 +105,43 @@ The CLI prints a run record as JSON. Canonical artifacts are written under `.dat
 Start the API server:
 
 ```bash
-npm run service
+bun run service
 ```
 
 Start the Temporal worker in another terminal:
 
 ```bash
-npm run worker
+bun run worker
 ```
 
 Submit a hosted research job:
 
 ```bash
-npm run cli -- submit "Research the latest Deep Agents JavaScript production patterns."
+bun run cli -- submit "Research the latest Deep Agents JavaScript production patterns."
 ```
 
 Check status:
 
 ```bash
-npm run cli -- status <run-id>
+bun run cli -- status <run-id>
 ```
 
 Fetch the final report:
 
 ```bash
-npm run cli -- artifact <run-id> report.md
+bun run cli -- artifact <run-id> report.md
 ```
 
 Review a run:
 
 ```bash
-npm run cli -- review <run-id> approved "Reviewed and cleared for use."
+bun run cli -- review <run-id> approved "Reviewed and cleared for use."
 ```
 
 Cancel a hosted run:
 
 ```bash
-npm run cli -- cancel <run-id>
+bun run cli -- cancel <run-id>
 ```
 
 ## API surface
@@ -197,5 +197,5 @@ Current limitations:
 - the fetch tool is basic and does not deeply parse PDFs or complex JS-rendered pages
 - LangSmith tracing is environment-driven rather than wrapped in custom observability code here
 - live integration tests are opt-in:
-  - `RUN_LIVE_BRAVE_TESTS=1 npm run test`
-  - `RUN_DEEPAGENT_SMOKE=1 npm run test`
+  - `RUN_LIVE_BRAVE_TESTS=1 bun run test`
+  - `RUN_DEEPAGENT_SMOKE=1 bun run test`

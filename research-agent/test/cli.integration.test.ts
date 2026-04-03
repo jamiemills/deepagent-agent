@@ -17,7 +17,7 @@ test("spawned CLI can submit, poll, review, and fetch artifacts against the host
       RESEARCH_API_BASE_URL: "http://mock.test",
       DATA_DIR: dir,
       MOCK_API_DATA_DIR: dir,
-      NODE_OPTIONS: `${process.env["NODE_OPTIONS"] ? `${process.env["NODE_OPTIONS"]} ` : ""}--import=${mockFetchModule}`,
+      BUN_PRELOAD_MODULE: mockFetchModule,
     };
 
     const submit = await runCliCommand(

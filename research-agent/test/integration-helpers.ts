@@ -177,18 +177,22 @@ export async function runCliCommand(args: string[], env?: NodeJS.ProcessEnv) {
     stderr: string;
     exitCode: number | null;
   }>((resolve, reject) => {
-    const child = spawn(
-      process.execPath,
-      ["--import", "tsx", "src/cli.ts", ...args],
-      {
-        cwd: projectRoot,
-        env: {
-          ...process.env,
-          ...env,
-        },
-        stdio: ["ignore", "pipe", "pipe"],
-      },
-    );
+    const childEnv = {
+      ...process.env,
+      ...env,
+    };
+    const commandArgs = ["run"];
+    const preloadModule = childEnv["BUN_PRELOAD_MODULE"];
+    if (preloadModule) {
+      commandArgs.push(`--preload=${preloadModule}`);
+    }
+    commandArgs.push("src/cli.ts", ...args);
+
+    const child = spawn("bun", commandArgs, {
+      cwd: projectRoot,
+      env: childEnv,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
 
     let stdout = "";
     let stderr = "";

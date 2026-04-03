@@ -21,12 +21,12 @@ type CliCommand = (typeof CLI_COMMANDS)[number];
 
 function usage(): never {
   console.error(`Usage:
-  npm run cli -- local "your research prompt"
-  npm run cli -- submit "your research prompt"
-  npm run cli -- status <run-id>
-  npm run cli -- cancel <run-id>
-  npm run cli -- review <run-id> <approved|rejected|pending> [notes]
-  npm run cli -- artifact <run-id> <artifact-name>
+  bun run cli -- local "your research prompt"
+  bun run cli -- submit "your research prompt"
+  bun run cli -- status <run-id>
+  bun run cli -- cancel <run-id>
+  bun run cli -- review <run-id> <approved|rejected|pending> [notes]
+  bun run cli -- artifact <run-id> <artifact-name>
 `);
   process.exit(1);
 }
