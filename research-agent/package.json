@@ -1,0 +1,43 @@
+{
+  "name": "research-agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "research": "tsx src/cli.ts local",
+    "cli": "tsx src/cli.ts",
+    "service": "tsx src/service/start.ts",
+    "worker": "tsx src/temporal/worker.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "biome check .",
+    "lint:complexity": "eslint --config eslint.complexity.config.mjs \"src/**/*.ts\" \"test/**/*.ts\" \"vitest.config.ts\"",
+    "format": "biome check --write .",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "prepare": "node scripts/install-hooks.mjs"
+  },
+  "dependencies": {
+    "@temporalio/client": "^1.11.6",
+    "@temporalio/worker": "^1.11.6",
+    "@temporalio/workflow": "^1.11.6",
+    "@langchain/core": "latest",
+    "@langchain/google": "latest",
+    "deepagents": "latest",
+    "dotenv": "^16.4.7",
+    "effect": "^3.13.8",
+    "fastify": "^5.2.1",
+    "langchain": "latest",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@typescript-eslint/parser": "^8.30.1",
+    "@vitest/coverage-v8": "^2.1.8",
+    "@types/node": "^22.14.1",
+    "ajv": "^6.12.6",
+    "eslint": "^9.39.1",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.3",
+    "vitest": "^2.1.8"
+  }
+}

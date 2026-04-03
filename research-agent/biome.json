@@ -1,0 +1,72 @@
+{
+  "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+  "files": {
+    "ignoreUnknown": true,
+    "ignore": ["node_modules", ".data", "coverage"]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space"
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "all": true,
+      "recommended": false,
+      "a11y": {
+        "all": true,
+        "recommended": false
+      },
+      "complexity": {
+        "all": true,
+        "recommended": false,
+        "noExcessiveCognitiveComplexity": "off",
+        "useLiteralKeys": "off"
+      },
+      "correctness": {
+        "all": true,
+        "recommended": false,
+        "noNodejsModules": "off",
+        "noUnusedVariables": "error"
+      },
+      "nursery": {
+        "all": true,
+        "recommended": false,
+        "noProcessEnv": "off",
+        "noSecrets": "off",
+        "useExplicitType": "off",
+        "useImportRestrictions": "off"
+      },
+      "performance": {
+        "all": true,
+        "recommended": false,
+        "useTopLevelRegex": "off"
+      },
+      "security": {
+        "all": true,
+        "recommended": false
+      },
+      "style": {
+        "all": true,
+        "recommended": false,
+        "noDefaultExport": "off",
+        "useNamingConvention": "off"
+      },
+      "suspicious": {
+        "all": true,
+        "recommended": false,
+        "noConsole": "off",
+        "noConsoleLog": "off",
+        "noExplicitAny": "error",
+        "noMisplacedAssertion": "off",
+        "useAwait": "off"
+      }
+    }
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "double",
+      "semicolons": "always"
+    }
+  }
+}
