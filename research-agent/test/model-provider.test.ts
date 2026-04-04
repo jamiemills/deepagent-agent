@@ -4,7 +4,7 @@ import { test } from "vitest";
 import { createResearchModel } from "../src/model-provider.js";
 
 test("createResearchModel builds an OpenAI model when the provider is openai", async () => {
-  const calls: Array<Record<string, unknown>> = [];
+  const calls: Record<string, unknown>[] = [];
 
   const model = await createResearchModel(
     {
@@ -32,7 +32,7 @@ test("createResearchModel builds an OpenAI model when the provider is openai", a
 });
 
 test("createResearchModel builds an Anthropic model when the provider is anthropic", async () => {
-  const calls: Array<Record<string, unknown>> = [];
+  const calls: Record<string, unknown>[] = [];
 
   const model = await createResearchModel(
     {
@@ -60,7 +60,7 @@ test("createResearchModel builds an Anthropic model when the provider is anthrop
 });
 
 test("createResearchModel keeps Vertex as the default provider behavior", async () => {
-  const calls: Array<Record<string, unknown>> = [];
+  const calls: Record<string, unknown>[] = [];
 
   const model = await createResearchModel(
     {

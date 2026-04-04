@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { buildResearchAgent } from "../agent.js";
 import { loadConfig } from "../config.js";
+import type { ResearchModelProvider } from "../model-provider.js";
 import type { ArtifactStore, MetadataStore } from "../storage/interfaces.js";
 import {
   classifyFreshnessSensitivity,
@@ -46,12 +47,18 @@ type ResearchRunDeps = {
   config: {
     dataDir: string;
     researchAgentModel: string;
+    researchAgentModelProvider: ResearchModelProvider;
+    openAiApiKey: string | undefined;
+    anthropicApiKey: string | undefined;
   };
   sourceTracker: SourceTracker;
   buildAgent: (args: {
     workspaceRoot: string;
     sourceTracker: SourceTracker;
     model: string;
+    modelProvider: ResearchModelProvider;
+    openAiApiKey: string | undefined;
+    anthropicApiKey: string | undefined;
   }) => Promise<AgentLike>;
 };
 
@@ -144,14 +151,23 @@ export async function executeResearchRun(args: {
   deps?: ResearchRunDeps;
 }): Promise<ResearchJobRecord> {
   const request = researchJobRequestSchema.parse(args.request);
-  const deps = args.deps ?? {
-    config: {
-      dataDir: loadConfig().dataDir,
-      researchAgentModel: loadConfig().researchAgentModel,
-    },
-    sourceTracker: new SourceTracker(),
-    buildAgent: buildResearchAgent,
-  };
+  const deps =
+    args.deps ??
+    (() => {
+      const resolvedConfig = loadConfig();
+
+      return {
+        config: {
+          dataDir: resolvedConfig.dataDir,
+          researchAgentModel: resolvedConfig.researchAgentModel,
+          researchAgentModelProvider: resolvedConfig.researchAgentModelProvider,
+          openAiApiKey: resolvedConfig.openAiApiKey,
+          anthropicApiKey: resolvedConfig.anthropicApiKey,
+        },
+        sourceTracker: new SourceTracker(),
+        buildAgent: buildResearchAgent,
+      };
+    })();
   const workspaceRoot = path.join(
     deps.config.dataDir,
     "workspaces",
@@ -167,6 +183,9 @@ export async function executeResearchRun(args: {
       workspaceRoot,
       sourceTracker,
       model: deps.config.researchAgentModel,
+      modelProvider: deps.config.researchAgentModelProvider,
+      openAiApiKey: deps.config.openAiApiKey,
+      anthropicApiKey: deps.config.anthropicApiKey,
     });
 
     const result = await agent.invoke(

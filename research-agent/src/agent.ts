@@ -1,10 +1,10 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { ChatGoogle } from "@langchain/google/node";
 import { FilesystemBackend, createDeepAgent } from "deepagents";
 
 import type { SourceTracker } from "./core/source-tracker.js";
+import { createResearchModel } from "./model-provider.js";
 import { createBraveSearchTool } from "./tools/brave-search.js";
 import { createFetchUrlTool } from "./tools/fetch-url.js";
 
@@ -40,6 +40,9 @@ export async function buildResearchAgent(args: {
   workspaceRoot: string;
   sourceTracker: SourceTracker;
   model: string;
+  modelProvider: "vertex" | "openai" | "anthropic";
+  openAiApiKey: string | undefined;
+  anthropicApiKey: string | undefined;
 }) {
   const backend = new FilesystemBackend({
     rootDir: args.workspaceRoot,
@@ -49,10 +52,11 @@ export async function buildResearchAgent(args: {
   const braveSearchTool = createBraveSearchTool(args.sourceTracker);
   const fetchUrlTool = createFetchUrlTool(args.sourceTracker);
   const agentTools = [braveSearchTool, fetchUrlTool] as never;
-  const model = new ChatGoogle({
-    model: args.model,
-    platformType: "gcp",
-    maxRetries: 2,
+  const model = await createResearchModel({
+    researchAgentModelProvider: args.modelProvider,
+    researchAgentModel: args.model,
+    openAiApiKey: args.openAiApiKey,
+    anthropicApiKey: args.anthropicApiKey,
   });
 
   return createDeepAgent({

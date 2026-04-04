@@ -1,6 +1,6 @@
 import { Effect } from "effect";
 import { tool } from "langchain";
-import { z } from "zod";
+import z from "zod/v3";
 
 import type { SourceTracker } from "../core/source-tracker.js";
 

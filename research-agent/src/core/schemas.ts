@@ -1,4 +1,4 @@
-import { z } from "zod";
+import z from "zod/v3";
 
 export const executionModeSchema = z.enum(["local", "hosted"]);
 export const runStatusSchema = z.enum([

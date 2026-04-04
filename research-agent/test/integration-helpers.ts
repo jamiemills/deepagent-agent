@@ -64,6 +64,9 @@ export function createInlineTemporalClient(args: {
                 config: {
                   dataDir: args.dataDir,
                   researchAgentModel: "test-model",
+                  researchAgentModelProvider: "vertex",
+                  openAiApiKey: undefined,
+                  anthropicApiKey: undefined,
                 },
                 sourceTracker: new SourceTracker(),
                 buildAgent: async ({ workspaceRoot, sourceTracker }) => {

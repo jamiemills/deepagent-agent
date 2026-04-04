@@ -31,8 +31,8 @@ function makeDeps(
     sourceTracker: SourceTracker;
     model: string;
     modelProvider: "vertex" | "openai" | "anthropic";
-    openAiApiKey?: string;
-    anthropicApiKey?: string;
+    openAiApiKey: string | undefined;
+    anthropicApiKey: string | undefined;
   }) => Promise<{
     invoke(
       input: unknown,
@@ -300,8 +300,8 @@ test("executeResearchRun passes provider configuration into agent construction",
           sourceTracker: SourceTracker;
           model: string;
           modelProvider: "vertex" | "openai" | "anthropic";
-          openAiApiKey?: string;
-          anthropicApiKey?: string;
+          openAiApiKey: string | undefined;
+          anthropicApiKey: string | undefined;
         }
       | undefined;
 
