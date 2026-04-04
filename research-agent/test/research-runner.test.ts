@@ -30,6 +30,9 @@ function makeDeps(
     workspaceRoot: string;
     sourceTracker: SourceTracker;
     model: string;
+    modelProvider: "vertex" | "openai" | "anthropic";
+    openAiApiKey?: string;
+    anthropicApiKey?: string;
   }) => Promise<{
     invoke(
       input: unknown,
@@ -41,6 +44,9 @@ function makeDeps(
     config: {
       dataDir,
       researchAgentModel: "test-model",
+      researchAgentModelProvider: "vertex" as const,
+      openAiApiKey: undefined,
+      anthropicApiKey: undefined,
     },
     sourceTracker,
     buildAgent,
@@ -279,5 +285,70 @@ test("executeResearchRun rethrows for hosted retry semantics when requested", as
     const updated = await metadataStore.getRun(runId);
     assert.equal(updated?.status, "failed");
     assert.equal(updated?.errorMessage, "retry me");
+  });
+});
+
+test("executeResearchRun passes provider configuration into agent construction", async () => {
+  await withTempDir(async (dir) => {
+    const metadataStore = new FileMetadataStore(path.join(dir, "metadata"));
+    const artifactStore = new FileArtifactStore(path.join(dir, "artifacts"));
+    const runId = "run-provider-config";
+    const prompt = "Research something";
+    let receivedArgs:
+      | {
+          workspaceRoot: string;
+          sourceTracker: SourceTracker;
+          model: string;
+          modelProvider: "vertex" | "openai" | "anthropic";
+          openAiApiKey?: string;
+          anthropicApiKey?: string;
+        }
+      | undefined;
+
+    await createRunRecord({
+      request: { prompt },
+      executionMode: "local",
+      metadataStore,
+      runId,
+    });
+
+    await executeResearchRun({
+      runId,
+      request: { prompt },
+      executionMode: "local",
+      metadataStore,
+      artifactStore,
+      deps: {
+        config: {
+          dataDir: dir,
+          researchAgentModel: "claude-3-7-sonnet-latest",
+          researchAgentModelProvider: "anthropic",
+          openAiApiKey: undefined,
+          anthropicApiKey: "sk-ant-test",
+        },
+        sourceTracker: new SourceTracker(),
+        buildAgent: async (args) => {
+          receivedArgs = args;
+          await fs.mkdir(path.join(args.workspaceRoot, "out"), {
+            recursive: true,
+          });
+          await fs.writeFile(
+            path.join(args.workspaceRoot, "out", "final-report.md"),
+            "Report body",
+          );
+          return {
+            async invoke() {
+              return {
+                messages: [{ type: "ai", content: "fallback report text" }],
+              };
+            },
+          };
+        },
+      },
+    });
+
+    assert.equal(receivedArgs?.modelProvider, "anthropic");
+    assert.equal(receivedArgs?.model, "claude-3-7-sonnet-latest");
+    assert.equal(receivedArgs?.anthropicApiKey, "sk-ant-test");
   });
 });
