@@ -12,6 +12,9 @@ bunx biome check .
 printf 'Running ESLint complexity gate...\n'
 bun run lint:complexity
 
+printf 'Running Semgrep rule pack...\n'
+bun run lint:semgrep
+
 printf 'Running typecheck...\n'
 bun run typecheck
 

@@ -1,0 +1,8 @@
+rules:
+  - id: dummy.never-match
+    message: Dummy Semgrep rule placeholder
+    severity: INFO
+    languages:
+      - typescript
+      - javascript
+    pattern: semgrep_dummy_never_match($X)

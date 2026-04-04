@@ -18,6 +18,8 @@
     "test:watch": "bun x --bun vitest",
     "lint": "bunx biome check .",
     "lint:complexity": "bunx eslint --config eslint.complexity.config.mjs \"src/**/*.ts\" \"test/**/*.ts\" \"vitest.config.ts\"",
+    "lint:semgrep": "semgrep scan --quiet --config semgrep/rules src test",
+    "test:semgrep": "semgrep test semgrep/rules",
     "format": "bunx biome check --write .",
     "typecheck": "bunx tsc -p tsconfig.json --noEmit",
     "prepare": "bun scripts/install-hooks.mjs"
@@ -48,6 +50,7 @@
     "@vitest/coverage-v8": "^4.1.2",
     "ajv": "^6.12.6",
     "eslint": "^9.39.1",
+    "eslint-plugin-sonarjs": "^4.0.2",
     "typescript": "^5.8.3",
     "vitest": "^4.1.2"
   }

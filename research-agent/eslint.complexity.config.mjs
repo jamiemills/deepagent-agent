@@ -1,4 +1,5 @@
 import tsParser from "@typescript-eslint/parser";
+import sonarjs from "eslint-plugin-sonarjs";
 
 export default [
   {
@@ -11,8 +12,12 @@ export default [
       ecmaVersion: "latest",
       sourceType: "module",
     },
+    plugins: {
+      sonarjs,
+    },
     rules: {
       complexity: ["error", 10],
+      "sonarjs/max-lines": ["warn", { maximum: 100000 }],
     },
   },
 ];
