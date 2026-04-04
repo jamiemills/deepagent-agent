@@ -1,68 +1,126 @@
 # Research Agent
 
-This is a Deep Agents JavaScript research agent scaffold evolved toward a production-grade internal system.
+`research-agent` is a Deep Agents JavaScript research system scaffold that has been pushed toward a production-style internal tool. It is Bun-based, Brave-backed for web discovery, Gemini-on-Vertex by default for model execution, and supports both direct local runs and hosted background execution.
 
-It supports two execution modes:
+This project is meant to be useful in two modes:
 
-- local operator runs through the CLI
-- hosted durable runs through a Fastify API plus Temporal workers
+- a direct local CLI for one-off operator runs
+- a hosted Fastify API plus Temporal worker setup for durable background jobs
+
+## What It Does
+
+At a high level, a run looks like this:
+
+1. accept a research prompt
+2. classify freshness sensitivity
+3. run a Deep Agents workflow with Brave search plus URL fetch/extract tools
+4. collect notes and output files in a per-run workspace
+5. generate canonical artifacts and provenance
+6. persist run metadata, freshness verdicts, and artifact pointers
+
+The current implementation writes:
+
+- run metadata to `.data/metadata/<run-id>.json`
+- working files to `.data/workspaces/<run-id>/`
+- canonical artifacts to `.data/artifacts/<run-id>/`
+
+Canonical artifacts include:
+
+- `report.md`
+- `provenance.json`
+- `summary.json`
+- copied `notes/` workspace files
+- copied `out/` workspace files such as `out/final-report.md` and `out/claim-ledger.json`
 
 ## Architecture
 
-The codebase is split into:
+The codebase is organized into a few clear layers:
 
-- shared agent/runtime core
-- a hardened Brave Search client
-- a fetch/extract tool for reading discovered URLs
-- provenance and freshness evaluation
-- file-backed metadata and artifact stores for the current implementation
-- a hosted API for job submission and retrieval
-- Temporal workflows and workers for durable execution
+- `src/agent.ts`
+  - Deep Agents configuration
+  - model construction
+  - research instructions
+  - subagent setup
+- `src/core/`
+  - run lifecycle
+  - freshness classification and evaluation
+  - provenance generation
+  - report decoration and artifact finalization
+- `src/tools/`
+  - `brave_search` for discovery
+  - `fetch_url` for reading discovered pages
+- `src/storage/`
+  - file-backed metadata and artifact stores
+- `src/service/`
+  - Fastify API construction and startup
+- `src/temporal/`
+  - Temporal workflow, client, activities, and worker wiring
+- `src/cli.ts`
+  - operator-facing local and hosted commands
 
-## Current production-oriented behavior
+The runtime is currently file-backed. It is suitable for local use and internal experimentation, but it is not yet a fully managed SaaS architecture.
 
-- `deepagents` remains the research harness
-- Brave Search is the discovery tool
-- `fetch_url` reads actual pages after discovery
-- each run gets an isolated workspace under `.data/workspaces/<run-id>/`
-- canonical artifacts are written to `.data/artifacts/<run-id>/`
-- run metadata is stored in `.data/metadata/<run-id>.json`
-- time-sensitive prompts are freshness-classified and checked against captured source dates/ages
-- each run emits:
-  - `report.md`
-  - `provenance.json`
-  - `summary.json`
-  - copied `notes/` and `out/` artifacts from the agent workspace
+## Current Behavior
+
+The current scaffold has these notable behaviors:
+
+- `deepagents` remains the main research harness
+- Brave Search is the discovery layer
+- `fetch_url` reads actual pages after discovery so the agent does not rely only on search snippets
+- prompts are classified as `evergreen` or `time_sensitive`
+- time-sensitive prompts are evaluated against captured source ages and dates
+- the final report is decorated with run metadata and freshness notes
+- runs can be marked for review when freshness fails or support is weak
 
 ## Prerequisites
 
-- Bun 1.3+
-- a Brave Search API key in `.env`
-- Vertex AI credentials for Gemini
-- Temporal if you want hosted durable execution
+You need:
 
-## Install
+- Bun `1.3+`
+- a valid `BRAVE_SEARCH_API_KEY`
+- Vertex AI credentials for Gemini
+- Temporal only if you want hosted durable execution
+
+For Gemini-on-Vertex, the current default setup assumes one of:
+
+- `GOOGLE_APPLICATION_CREDENTIALS`
+- Application Default Credentials
+- other valid Google Cloud auth available to `@langchain/google`
+
+## Installation
+
+From this directory:
 
 ```bash
+cd /Users/jamie.mills/c9h/code/deepagent-agent/research-agent
 bun install
 ```
 
 Useful validation commands:
 
 ```bash
-bun run typecheck
 bun run lint
+bun run lint:complexity
+bun run typecheck
 bun run test
 bun run format
 ```
 
-This project uses Biome for linting and formatting. When installed inside a Git repository, `bun install` runs the `prepare` script and configures `core.hooksPath` to [`.githooks`](/Users/jamie.mills/c9h/code/deepagent-agent/research-agent/.githooks), so the pre-commit hook runs `bunx biome check`, `bun run lint:complexity`, `bun run typecheck`, and `bun run test`.
+## Environment Configuration
 
-## Configure
+Copy `.env.example` if you want an app-local env file:
 
-Copy `.env.example` to `.env`.
+```bash
+cp .env.example .env
+```
 
-By default the code loads `.env` from the repository root first, then falls back to `research-agent/.env`. You can override that with `RESEARCH_AGENT_ENV_FILE=/absolute/path/to/.env`.
+The app loads environment variables in this order:
+
+1. `RESEARCH_AGENT_ENV_FILE` if set
+2. repo-root `.env`
+3. `research-agent/.env`
+
+In your current setup, the repo-root `.env` is typically the active one.
 
 Important variables:
 
@@ -70,37 +128,65 @@ Important variables:
 - `RESEARCH_AGENT_MODEL`
 - `GOOGLE_CLOUD_PROJECT`
 - `GOOGLE_CLOUD_LOCATION`
-- `GOOGLE_APPLICATION_CREDENTIALS` for a local service-account file, or Application Default Credentials
+- `GOOGLE_APPLICATION_CREDENTIALS`
 - `TEMPORAL_ADDRESS`
 - `TEMPORAL_NAMESPACE`
 - `TEMPORAL_TASK_QUEUE`
 - `RESEARCH_API_BASE_URL`
+- `PORT`
+- `DATA_DIR`
 
-Default model:
+Default values:
 
 ```text
-gemini-3.1-pro-preview
+RESEARCH_AGENT_MODEL=gemini-3.1-pro-preview
+PORT=3001
+RESEARCH_API_BASE_URL=http://127.0.0.1:3001
+TEMPORAL_ADDRESS=localhost:7233
+TEMPORAL_NAMESPACE=default
+TEMPORAL_TASK_QUEUE=research-agent
+DATA_DIR=.data
 ```
 
-The app constructs a Vertex AI-backed `ChatGoogle` model explicitly with `platformType: "gcp"`, so this scaffold is now Gemini-on-Vertex-first rather than provider-agnostic by default.
+The app explicitly constructs a Vertex-backed `ChatGoogle` model with `platformType: "gcp"`, so the default runtime is Gemini on Vertex AI rather than a provider-neutral default.
 
-## Local run
+## How To Run It
 
-Run a local research job directly:
+There are two execution modes: local and hosted.
+
+### Local Mode
+
+This is the simplest path. It runs the research job directly in the current process, without the Fastify API and without Temporal.
+
+Shortcut:
 
 ```bash
 bun run research -- "Research the current state of the UK small modular reactor market."
 ```
 
-Or explicitly:
+Equivalent explicit CLI command:
 
 ```bash
 bun run cli -- local "Research the UK small modular reactor market and write a report."
 ```
 
-The CLI prints a run record as JSON. Canonical artifacts are written under `.data/artifacts/<run-id>/`.
+Both commands do the same thing:
 
-## Hosted mode
+- create a local run record
+- execute the Deep Agents workflow in-process
+- write artifacts under `.data/artifacts/<run-id>/`
+- print the final run record JSON to stdout
+
+Use local mode when you want:
+
+- one-off interactive runs
+- the quickest end-to-end test path
+- no API server
+- no Temporal infrastructure
+
+### Hosted Mode
+
+Hosted mode is for durable background jobs.
 
 Start the API server:
 
@@ -114,37 +200,61 @@ Start the Temporal worker in another terminal:
 bun run worker
 ```
 
-Submit a hosted research job:
+Then submit jobs through the CLI or the HTTP API:
 
 ```bash
 bun run cli -- submit "Research the latest Deep Agents JavaScript production patterns."
 ```
 
-Check status:
+Use hosted mode when you want:
+
+- background execution
+- status polling
+- cancellation
+- explicit review flow
+- service-style integration points
+
+## CLI Command Reference
+
+Run a local research job:
+
+```bash
+bun run cli -- local "your prompt"
+```
+
+Submit a hosted research job:
+
+```bash
+bun run cli -- submit "your prompt"
+```
+
+Check hosted job status:
 
 ```bash
 bun run cli -- status <run-id>
 ```
 
-Fetch the final report:
+Fetch an artifact:
 
 ```bash
 bun run cli -- artifact <run-id> report.md
 ```
 
-Review a run:
+Approve, reject, or mark pending review:
 
 ```bash
 bun run cli -- review <run-id> approved "Reviewed and cleared for use."
+bun run cli -- review <run-id> rejected "Needs better sourcing."
+bun run cli -- review <run-id> pending "Waiting on human review."
 ```
 
-Cancel a hosted run:
+Cancel a hosted job:
 
 ```bash
 bun run cli -- cancel <run-id>
 ```
 
-## API surface
+## API Reference
 
 The hosted server currently exposes:
 
@@ -154,37 +264,132 @@ The hosted server currently exposes:
 - `POST /research-jobs/:id/review`
 - `GET /research-jobs/:id/artifacts/*`
 
-## Freshness and provenance
+Typical API lifecycle:
 
-The current implementation classifies prompts into:
+1. `POST /research-jobs`
+2. `GET /research-jobs/:id` until complete
+3. `GET /research-jobs/:id/artifacts/report.md`
+
+## Run Outputs and Data Layout
+
+For a run ID like `abc123`, the filesystem layout looks like this:
+
+- `.data/metadata/abc123.json`
+- `.data/workspaces/abc123/`
+- `.data/artifacts/abc123/report.md`
+- `.data/artifacts/abc123/provenance.json`
+- `.data/artifacts/abc123/summary.json`
+- `.data/artifacts/abc123/out/final-report.md`
+- `.data/artifacts/abc123/out/claim-ledger.json`
+
+The workspace is where the agent does intermediate work. The artifact directory is the canonical persisted output.
+
+## Freshness and Provenance
+
+The scaffold currently classifies prompts into:
 
 - `evergreen`
 - `time_sensitive`
 
-For time-sensitive prompts it evaluates captured source dates and age strings to produce:
+For time-sensitive prompts, it evaluates captured evidence and emits one of:
 
 - `passed`
 - `warning`
 - `failed`
 
-These results are persisted into:
+Freshness results are persisted into:
 
 - run metadata
 - `summary.json`
 - `provenance.json`
 - the top section of `report.md`
 
-## Project layout
+The provenance manifest records:
 
-- `src/agent.ts`: Deep Agents configuration
-- `src/core/`: run model, provenance, freshness, and execution pipeline
-- `src/tools/`: Brave Search and URL fetch/extract tools
-- `src/storage/`: metadata and artifact store interfaces plus file-backed implementations
-- `src/service/server.ts`: hosted API
+- run ID
+- prompt
+- freshness assessment
+- source inventory
+- claim ledger
+
+## Developer Workflow
+
+This project is Bun-only.
+
+Use:
+
+- `bun install`
+- `bun run ...`
+- `bunx ...`
+
+Do not regenerate `package-lock.json`; `bun.lock` is the only lockfile.
+
+The pre-commit hook runs:
+
+- `bunx biome check .`
+- `bun run lint:complexity`
+- `bun run typecheck`
+- `bun run test`
+
+When `bun install` runs inside a Git repo, `prepare` configures `core.hooksPath` to `.githooks`.
+
+## Testing
+
+Normal suite:
+
+```bash
+bun run test
+```
+
+Live integration tests are opt-in and require working credentials and network access:
+
+```bash
+RUN_LIVE_BRAVE_TESTS=1 bun run test
+RUN_DEEPAGENT_SMOKE=1 bun run test
+RUN_LIVE_CLI_LOCAL_TEST=1 bun run test
+```
+
+The live tests cover:
+
+- direct Brave API connectivity
+- a real Deep Agents smoke run
+- a real local CLI run
+
+## Project Layout
+
+- `src/agent.ts`: Deep Agents configuration and subagents
+- `src/core/`: run orchestration, provenance, freshness, reports, schemas, types
+- `src/tools/`: Brave search and URL fetch/extract tools
+- `src/storage/`: file-backed metadata and artifact stores
+- `src/service/server.ts`: Fastify API
+- `src/service/start.ts`: service startup entrypoint
 - `src/temporal/`: workflow, client, activities, and worker
-- `src/cli.ts`: local and hosted operator CLI
-- `skills/research-report/`: research workflow skill
-- `AGENTS.md`: always-loaded research memory
+- `src/cli.ts`: operator CLI
+- `skills/research-report/`: report-writing skill
+- `AGENTS.md`: always-loaded memory
+
+## Troubleshooting
+
+If local runs fail immediately:
+
+- verify `BRAVE_SEARCH_API_KEY`
+- verify Vertex credentials are actually available to the process
+- verify the loaded env file is the one you expect
+
+If hosted mode fails:
+
+- make sure the Fastify service is running
+- make sure the Temporal worker is running
+- make sure `TEMPORAL_ADDRESS`, `TEMPORAL_NAMESPACE`, and `TEMPORAL_TASK_QUEUE` match between service and worker
+
+If the wrong env file is being used:
+
+- set `RESEARCH_AGENT_ENV_FILE=/absolute/path/to/.env`
+
+If live tests fail:
+
+- confirm network access is available
+- confirm the required env variables are present in the loaded `.env`
 
 ## Limitations
 
@@ -192,10 +397,8 @@ This is a serious scaffold, not a finished SaaS product.
 
 Current limitations:
 
-- storage is file-backed rather than relational/object-store-backed
-- hosted runs still use local filesystem workspaces rather than a remote sandbox backend
-- the fetch tool is basic and does not deeply parse PDFs or complex JS-rendered pages
-- LangSmith tracing is environment-driven rather than wrapped in custom observability code here
-- live integration tests are opt-in:
-  - `RUN_LIVE_BRAVE_TESTS=1 bun run test`
-  - `RUN_DEEPAGENT_SMOKE=1 bun run test`
+- storage is file-backed, not relational/object-store-backed
+- hosted runs still use local filesystem workspaces rather than a managed sandbox backend
+- the fetch tool is intentionally basic and does not deeply parse PDFs or JS-heavy pages
+- LangSmith tracing is environment-driven rather than wrapped in a custom observability layer here
+- the API and persistence model are still internal-tool shaped rather than hardened public-product contracts
