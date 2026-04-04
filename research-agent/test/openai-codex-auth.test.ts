@@ -24,6 +24,35 @@ test("deriveOpenAICodexAccountId reads the ChatGPT account id claim from the tok
   assert.equal(deriveOpenAICodexAccountId(token), "acct-derived");
 });
 
+function createRefreshFetch(refreshedToken: string) {
+  return async (input: string | URL | Request, init?: RequestInit) => {
+    assert.equal(input, "https://auth.openai.com/oauth/token");
+    assert.equal(init?.method, "POST");
+    assert.deepEqual(init?.headers, {
+      "Content-Type": "application/json",
+    });
+    assert.deepEqual(JSON.parse(String(init?.body)), {
+      grant_type: "refresh_token",
+      refresh_token: "refresh-token",
+      client_id: "client-before-refresh",
+    });
+
+    return new Response(
+      JSON.stringify({
+        access_token: refreshedToken,
+        refresh_token: "refresh-token-2",
+        expires_in: 300,
+      }),
+      {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      },
+    );
+  };
+}
+
 test("resolveOpenAICodexSession refreshes an expired token and derives account metadata from the refreshed token", async () => {
   const expiredToken = makeJwt({
     client_id: "client-before-refresh",
@@ -46,32 +75,7 @@ test("resolveOpenAICodexSession refreshes an expired token and derives account m
     },
     {
       now: () => 100,
-      fetch: async (input, init) => {
-        assert.equal(input, "https://auth.openai.com/oauth/token");
-        assert.equal(init?.method, "POST");
-        assert.deepEqual(init?.headers, {
-          "Content-Type": "application/json",
-        });
-        assert.deepEqual(JSON.parse(String(init?.body)), {
-          grant_type: "refresh_token",
-          refresh_token: "refresh-token",
-          client_id: "client-before-refresh",
-        });
-
-        return new Response(
-          JSON.stringify({
-            access_token: refreshedToken,
-            refresh_token: "refresh-token-2",
-            expires_in: 300,
-          }),
-          {
-            status: 200,
-            headers: {
-              "Content-Type": "application/json",
-            },
-          },
-        );
-      },
+      fetch: createRefreshFetch(refreshedToken),
     },
   );
 

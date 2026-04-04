@@ -17,11 +17,16 @@
     "test:provider:vertex": "bun x --bun vitest run test/provider-vertex.test.ts",
     "test:watch": "bun x --bun vitest",
     "lint": "bunx biome check .",
-    "lint:complexity": "bunx eslint --config eslint.complexity.config.mjs \"src/**/*.ts\" \"test/**/*.ts\" \"vitest.config.ts\"",
+    "check:fast": "printf 'Running Biome checks...\\n' && bunx biome check . && printf 'Running staged policy gate...\\n' && bun run policy:diff && printf 'Running ESLint complexity gate...\\n' && bun run lint:complexity",
+    "lint:complexity": "bunx eslint --config eslint.complexity.config.mjs \"src/**/*.ts\" \"test/**/*.ts\"",
+    "lint:typed": "bunx eslint --config eslint.typed.config.mjs \"src/**/*.ts\" \"test/**/*.ts\"",
     "lint:semgrep": "semgrep scan --quiet --config semgrep/rules src test biome.json eslint.complexity.config.mjs package.json tsconfig.json .githooks",
     "test:semgrep": "semgrep test semgrep/rules",
+    "agent-policy": "bun run policy:diff && bun run verify && bun run lint:typed",
+    "policy:diff": "bun scripts/check-diff-policies.mjs",
     "format": "bunx biome check --write .",
     "typecheck": "bunx tsc -p tsconfig.json",
+    "verify": "printf 'Running Biome checks...\\n' && bunx biome check . && printf 'Running typecheck...\\n' && bun run typecheck && printf 'Running ESLint complexity gate...\\n' && bun run lint:complexity && printf 'Running Semgrep rule pack...\\n' && bun run lint:semgrep && printf 'Running test suite...\\n' && bun run test",
     "prepare": "bun scripts/install-hooks.mjs"
   },
   "dependencies": {
@@ -45,6 +50,8 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
+    "@eslint/js": "^10.0.1",
+    "@types/ms": "^2.1.0",
     "@types/node": "^22.14.1",
     "@typescript-eslint/parser": "^8.30.1",
     "@vitest/coverage-v8": "^4.1.2",
@@ -52,6 +59,7 @@
     "eslint": "^9.39.1",
     "eslint-plugin-sonarjs": "^4.0.2",
     "typescript": "^5.8.3",
+    "typescript-eslint": "^8.58.0",
     "vitest": "^4.1.2"
   }
 }

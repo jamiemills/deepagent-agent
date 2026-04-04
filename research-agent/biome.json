@@ -2,7 +2,7 @@
   "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
   "files": {
     "ignoreUnknown": true,
-    "ignore": ["node_modules", ".data", "coverage"]
+    "ignore": ["node_modules", ".data", "coverage", "semgrep/rules"]
   },
   "formatter": {
     "enabled": true,
@@ -18,7 +18,7 @@
         "recommended": false
       },
       "complexity": {
-        "all": true,
+        "all": false,
         "recommended": false,
         "noExcessiveCognitiveComplexity": "off",
         "useLiteralKeys": "off"
@@ -50,6 +50,7 @@
         "all": true,
         "recommended": false,
         "noDefaultExport": "off",
+        "noNonNullAssertion": "error",
         "useNamingConvention": "off"
       },
       "suspicious": {

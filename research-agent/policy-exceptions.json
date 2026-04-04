@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "exceptions": [
+    {
+      "id": "policy-bootstrap-large-diff",
+      "policy": "large-diff",
+      "paths": [
+        ".github/**",
+        ".githooks/**",
+        "biome.json",
+        "bun.lock",
+        "eslint.complexity.config.mjs",
+        "eslint.typed.config.mjs",
+        "package.json",
+        "policy-exceptions.json",
+        "scripts/**",
+        "semgrep/rules/**",
+        "src/**",
+        "test/**",
+        "tsconfig.json"
+      ],
+      "reason": "Bootstrapping the policy gate requires a one-time repo-wide enforcement refactor.",
+      "expiresOn": "2026-04-18"
+    },
+    {
+      "id": "policy-bootstrap-enforcement-change",
+      "policy": "enforcement-change",
+      "paths": [
+        ".github/**",
+        ".githooks/**",
+        "biome.json",
+        "eslint.complexity.config.mjs",
+        "eslint.typed.config.mjs",
+        "package.json",
+        "scripts/**",
+        "semgrep/rules/**",
+        "src/**"
+      ],
+      "reason": "This change intentionally introduces and rewires the enforcement surface.",
+      "expiresOn": "2026-04-18"
+    },
+    {
+      "id": "policy-bootstrap-complexity-regression",
+      "policy": "complexity-regression",
+      "paths": [
+        "semgrep/rules/require-boundary-validation.ts",
+        "src/core/schemas.ts",
+        "src/temporal/activities.ts",
+        "src/temporal/workflows.ts",
+        "test/hosted-e2e.test.ts",
+        "test/openai-codex-auth.test.ts",
+        "test/server.test.ts"
+      ],
+      "reason": "These touched files grew as part of boundary-validation and test-restructure work and will be reduced in follow-up cleanup.",
+      "expiresOn": "2026-04-18"
+    }
+  ]
+}

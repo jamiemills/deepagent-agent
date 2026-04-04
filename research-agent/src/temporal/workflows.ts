@@ -1,5 +1,6 @@
 import { proxyActivities } from "@temporalio/workflow";
 
+import { hostedResearchJobInputSchema } from "../core/schemas.js";
 import type { ResearchJobRecord, ResearchJobRequest } from "../core/types.js";
 
 const { runHostedResearchJob } = proxyActivities<{
@@ -18,5 +19,6 @@ export async function researchJobWorkflow(input: {
   runId: string;
   request: ResearchJobRequest;
 }): Promise<ResearchJobRecord> {
-  return runHostedResearchJob(input);
+  const payload = hostedResearchJobInputSchema.parse(input);
+  return runHostedResearchJob(payload);
 }

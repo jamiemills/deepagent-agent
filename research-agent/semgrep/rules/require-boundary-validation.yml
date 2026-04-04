@@ -25,3 +25,30 @@ rules:
       - pattern: await $RESPONSE.json()
       - pattern-not-inside: $SCHEMA.parse(await $RESPONSE.json())
       - pattern-not-inside: $SCHEMA.safeParse(await $RESPONSE.json())
+  - id: boundary.require-temporal-input-validation
+    message: Validate Temporal activity and workflow inputs with a schema.
+    severity: ERROR
+    languages:
+      - typescript
+      - javascript
+    paths:
+      include:
+        - src/temporal/**/*.ts
+    patterns:
+      - pattern-either:
+          - pattern: input.runId
+          - pattern: input.request
+      - pattern-not-inside: $SCHEMA.parse(input)
+      - pattern-not-inside: $SCHEMA.safeParse(input)
+  - id: boundary.require-storage-json-validation
+    message: Validate JSON loaded from storage boundaries before use.
+    severity: ERROR
+    languages:
+      - typescript
+      - javascript
+    paths:
+      include:
+        - src/storage/**/*.ts
+    patterns:
+      - pattern: JSON.parse($RAW)
+      - pattern-not-inside: $SCHEMA.parse(JSON.parse($RAW))

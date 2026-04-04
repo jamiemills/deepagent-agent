@@ -1,0 +1,7 @@
+rules:
+  - id: typescript.no-as-any
+    message: Do not cast to any; model the type precisely instead.
+    severity: ERROR
+    languages:
+      - typescript
+    pattern: $VALUE as any

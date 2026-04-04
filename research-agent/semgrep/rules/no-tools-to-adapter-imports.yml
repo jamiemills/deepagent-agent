@@ -1,0 +1,11 @@
+rules:
+  - id: architecture.no-tools-to-adapter-imports
+    message: Tool modules must not import service, storage, or temporal layers.
+    severity: ERROR
+    languages:
+      - typescript
+      - javascript
+    paths:
+      include:
+        - src/tools/**/*.ts
+    pattern-regex: from\s+["'](?:\.\./)+(?:service|storage|temporal)/

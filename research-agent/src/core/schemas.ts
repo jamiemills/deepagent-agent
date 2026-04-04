@@ -43,6 +43,11 @@ export const reviewRequestSchema = z.object({
   notes: z.string().optional(),
 });
 
+export const hostedResearchJobInputSchema = z.object({
+  runId: z.string(),
+  request: researchJobRequestSchema,
+});
+
 export const claimLedgerRecordSchema = z.object({
   claim: z.string(),
   sourceUrls: z.array(z.string().url()),
