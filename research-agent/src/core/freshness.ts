@@ -92,35 +92,56 @@ function sourceAgeInDays(source: SourceRecord): number | null {
   return daysSince(dated);
 }
 
-export function evaluateFreshness(
+function notApplicableAssessment(
   sensitivity: FreshnessSensitivity,
-  sources: SourceRecord[],
 ): FreshnessAssessment {
-  if (sensitivity === "evergreen") {
-    return {
-      sensitivity,
-      verdict: "not_applicable",
-      reasons: [
-        "Prompt classified as evergreen; strict freshness gate not required.",
-      ],
-      recentSourceCount: 0,
-      datedSourceCount: 0,
-    };
-  }
+  return {
+    sensitivity,
+    verdict: "not_applicable",
+    reasons: [
+      "Prompt classified as evergreen; strict freshness gate not required.",
+    ],
+    recentSourceCount: 0,
+    datedSourceCount: 0,
+  };
+}
 
-  const agedSources = sources
+function collectAgedSources(sources: SourceRecord[]) {
+  return sources
     .map((source) => ({ source, ageDays: sourceAgeInDays(source) }))
     .filter((item) => item.ageDays !== null) as Array<{
     source: SourceRecord;
     ageDays: number;
   }>;
+}
 
+function summarizeTimeSensitiveSources(
+  agedSources: Array<{
+    source: SourceRecord;
+    ageDays: number;
+  }>,
+) {
   const recentSources = agedSources.filter(
     (item) => item.ageDays <= RECENT_DAYS_THRESHOLD,
   );
   const officialRecentSources = recentSources.filter(
     (item) => item.source.sourceType === "official",
   );
+
+  return { recentSources, officialRecentSources };
+}
+
+export function evaluateFreshness(
+  sensitivity: FreshnessSensitivity,
+  sources: SourceRecord[],
+): FreshnessAssessment {
+  if (sensitivity === "evergreen") {
+    return notApplicableAssessment(sensitivity);
+  }
+
+  const agedSources = collectAgedSources(sources);
+  const { recentSources, officialRecentSources } =
+    summarizeTimeSensitiveSources(agedSources);
 
   if (recentSources.length >= 2 || officialRecentSources.length > 0) {
     return {
