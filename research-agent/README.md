@@ -1,6 +1,6 @@
 # Research Agent
 
-`research-agent` is a Deep Agents JavaScript research system scaffold that has been pushed toward a production-style internal tool. It is Bun-based, Brave-backed for web discovery, Gemini-on-Vertex by default for model execution, and supports both direct local runs and hosted background execution.
+`research-agent` is a Deep Agents JavaScript research system scaffold that has been pushed toward a production-style internal tool. It is Bun-based, Brave-backed for web discovery, uses Vertex by default for model execution, and now also supports OpenAI and Anthropic models through env configuration. It supports both direct local runs and hosted background execution.
 
 This project is meant to be useful in two modes:
 
@@ -78,14 +78,22 @@ You need:
 
 - Bun `1.3+`
 - a valid `BRAVE_SEARCH_API_KEY`
-- Vertex AI credentials for Gemini
+- one model provider configuration: Vertex, OpenAI, or Anthropic
 - Temporal only if you want hosted durable execution
 
-For Gemini-on-Vertex, the current default setup assumes one of:
+For `RESEARCH_AGENT_MODEL_PROVIDER=vertex`, the current setup assumes one of:
 
 - `GOOGLE_APPLICATION_CREDENTIALS`
 - Application Default Credentials
 - other valid Google Cloud auth available to `@langchain/google`
+
+For `RESEARCH_AGENT_MODEL_PROVIDER=openai`, set:
+
+- `OPENAI_API_KEY`
+
+For `RESEARCH_AGENT_MODEL_PROVIDER=anthropic`, set:
+
+- `ANTHROPIC_API_KEY`
 
 ## Installation
 
@@ -125,7 +133,10 @@ In your current setup, the repo-root `.env` is typically the active one.
 Important variables:
 
 - `BRAVE_SEARCH_API_KEY`
+- `RESEARCH_AGENT_MODEL_PROVIDER`
 - `RESEARCH_AGENT_MODEL`
+- `OPENAI_API_KEY`
+- `ANTHROPIC_API_KEY`
 - `GOOGLE_CLOUD_PROJECT`
 - `GOOGLE_CLOUD_LOCATION`
 - `GOOGLE_APPLICATION_CREDENTIALS`
@@ -139,6 +150,7 @@ Important variables:
 Default values:
 
 ```text
+RESEARCH_AGENT_MODEL_PROVIDER=vertex
 RESEARCH_AGENT_MODEL=gemini-3.1-pro-preview
 PORT=3001
 RESEARCH_API_BASE_URL=http://127.0.0.1:3001
@@ -148,7 +160,25 @@ TEMPORAL_TASK_QUEUE=research-agent
 DATA_DIR=.data
 ```
 
-The app explicitly constructs a Vertex-backed `ChatGoogle` model with `platformType: "gcp"`, so the default runtime is Gemini on Vertex AI rather than a provider-neutral default.
+Provider examples:
+
+```text
+# Vertex default
+RESEARCH_AGENT_MODEL_PROVIDER=vertex
+RESEARCH_AGENT_MODEL=gemini-3.1-pro-preview
+
+# OpenAI
+RESEARCH_AGENT_MODEL_PROVIDER=openai
+RESEARCH_AGENT_MODEL=gpt-4.1
+OPENAI_API_KEY=your-openai-key
+
+# Anthropic
+RESEARCH_AGENT_MODEL_PROVIDER=anthropic
+RESEARCH_AGENT_MODEL=claude-3-7-sonnet-latest
+ANTHROPIC_API_KEY=your-anthropic-key
+```
+
+The runtime selects the chat model from `RESEARCH_AGENT_MODEL_PROVIDER`. Vertex remains the default so existing `.env` files keep working.
 
 ## How To Run It
 
@@ -373,7 +403,7 @@ The live tests cover:
 If local runs fail immediately:
 
 - verify `BRAVE_SEARCH_API_KEY`
-- verify Vertex credentials are actually available to the process
+- verify the credentials for the selected `RESEARCH_AGENT_MODEL_PROVIDER`
 - verify the loaded env file is the one you expect
 
 If hosted mode fails:
