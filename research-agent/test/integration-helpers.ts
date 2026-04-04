@@ -163,18 +163,35 @@ export async function waitForRun(
   timeoutMs = 8_000,
 ) {
   const startedAt = Date.now();
+  let lastRecord: ResearchJobRecord | undefined;
+  let lastError: Error | undefined;
 
   while (Date.now() - startedAt < timeoutMs) {
-    const record = await load();
-    if (predicate(record)) {
-      return record;
+    try {
+      const record = await load();
+      lastRecord = record;
+      lastError = undefined;
+
+      if (predicate(record)) {
+        return record;
+      }
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
     }
+
     await sleep(50);
   }
 
-  const lastRecord = await load();
+  if (lastRecord) {
+    assert.fail(
+      `timed out waiting for run state; last status was ${lastRecord.status}`,
+    );
+  }
+
   assert.fail(
-    `timed out waiting for run state; last status was ${lastRecord.status}`,
+    `timed out waiting for run state; last error was ${
+      lastError?.message ?? "unknown"
+    }`,
   );
 }
 
