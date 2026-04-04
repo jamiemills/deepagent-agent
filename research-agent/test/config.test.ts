@@ -31,21 +31,35 @@ async function withEnv(
   }
 }
 
-test("config exposes the loaded env path and required defaults", () => {
-  const config = loadConfig();
+test("config exposes the loaded env path and required defaults", async () => {
+  await withEnv(
+    {
+      RESEARCH_AGENT_MODEL_PROVIDER: "vertex",
+      OPENAI_API_KEY: undefined,
+      OPENAI_ACCESS_TOKEN: undefined,
+      OPENAI_CODEX_ACCESS_TOKEN: undefined,
+      OPENAI_CODEX_REFRESH_TOKEN: undefined,
+      OPENAI_CODEX_EXPIRES_AT: undefined,
+      OPENAI_CODEX_ACCOUNT_ID: undefined,
+      ANTHROPIC_API_KEY: undefined,
+    },
+    () => {
+      const config = loadConfig();
 
-  const loadedEnvPath = getLoadedEnvPath();
-  assert.equal(
-    loadedEnvPath === null || typeof loadedEnvPath === "string",
-    true,
-  );
-  assert.equal(typeof config.port, "number");
-  assert.equal(typeof config.researchAgentModel, "string");
-  assert.equal(
-    ["vertex", "openai", "anthropic"].includes(
-      config.researchAgentModelProvider,
-    ),
-    true,
+      const loadedEnvPath = getLoadedEnvPath();
+      assert.equal(
+        loadedEnvPath === null || typeof loadedEnvPath === "string",
+        true,
+      );
+      assert.equal(typeof config.port, "number");
+      assert.equal(typeof config.researchAgentModel, "string");
+      assert.equal(
+        ["vertex", "openai", "openai-codex", "anthropic"].includes(
+          config.researchAgentModelProvider,
+        ),
+        true,
+      );
+    },
   );
 });
 
@@ -67,19 +81,49 @@ test("config reads OpenAI provider settings from env", async () => {
   );
 });
 
-test("config accepts an OpenAI access token as the openai credential", async () => {
+test("config reads OpenAI Codex provider settings from env", async () => {
   await withEnv(
     {
-      RESEARCH_AGENT_MODEL_PROVIDER: "openai",
-      RESEARCH_AGENT_MODEL: "gpt-4.1-mini",
+      RESEARCH_AGENT_MODEL_PROVIDER: "openai-codex",
+      RESEARCH_AGENT_MODEL: "gpt-5.4-codex",
       OPENAI_API_KEY: undefined,
-      OPENAI_ACCESS_TOKEN: "oidc-access-token",
+      OPENAI_ACCESS_TOKEN: undefined,
+      OPENAI_CODEX_ACCESS_TOKEN: "codex-access-token",
+      OPENAI_CODEX_REFRESH_TOKEN: "codex-refresh-token",
+      OPENAI_CODEX_EXPIRES_AT: "1746230400000",
+      OPENAI_CODEX_ACCOUNT_ID: "acct-codex",
     },
     () => {
       const config = loadConfig();
 
-      assert.equal(config.researchAgentModelProvider, "openai");
-      assert.equal(config.openAiAccessToken, "oidc-access-token");
+      assert.equal(config.researchAgentModelProvider, "openai-codex");
+      assert.equal(config.researchAgentModel, "gpt-5.4-codex");
+      assert.equal(config.openAiCodexAccessToken, "codex-access-token");
+      assert.equal(config.openAiCodexRefreshToken, "codex-refresh-token");
+      assert.equal(config.openAiCodexExpiresAt, 1746230400000);
+      assert.equal(config.openAiCodexAccountId, "acct-codex");
+      assert.equal(config.openAiApiKey, undefined);
+    },
+  );
+});
+
+test("config maps OPENAI_ACCESS_TOKEN to the Codex provider as a deprecated alias", async () => {
+  await withEnv(
+    {
+      RESEARCH_AGENT_MODEL_PROVIDER: "openai-codex",
+      RESEARCH_AGENT_MODEL: "gpt-5.4-codex",
+      OPENAI_API_KEY: undefined,
+      OPENAI_ACCESS_TOKEN: "legacy-codex-token",
+      OPENAI_CODEX_ACCESS_TOKEN: undefined,
+      OPENAI_CODEX_REFRESH_TOKEN: undefined,
+      OPENAI_CODEX_EXPIRES_AT: undefined,
+      OPENAI_CODEX_ACCOUNT_ID: undefined,
+    },
+    () => {
+      const config = loadConfig();
+
+      assert.equal(config.researchAgentModelProvider, "openai-codex");
+      assert.equal(config.openAiCodexAccessToken, "legacy-codex-token");
       assert.equal(config.openAiApiKey, undefined);
     },
   );
@@ -109,11 +153,29 @@ test("config rejects an OpenAI provider selection without an API key", async () 
       RESEARCH_AGENT_MODEL_PROVIDER: "openai",
       OPENAI_API_KEY: undefined,
       OPENAI_ACCESS_TOKEN: undefined,
+      OPENAI_CODEX_ACCESS_TOKEN: "codex-access-token",
     },
     () => {
       assert.throws(
         () => loadConfig(),
-        /OPENAI_API_KEY or OPENAI_ACCESS_TOKEN is required when RESEARCH_AGENT_MODEL_PROVIDER=openai/,
+        /OPENAI_API_KEY is required when RESEARCH_AGENT_MODEL_PROVIDER=openai/,
+      );
+    },
+  );
+});
+
+test("config rejects an OpenAI Codex provider selection without an OAuth token", async () => {
+  await withEnv(
+    {
+      RESEARCH_AGENT_MODEL_PROVIDER: "openai-codex",
+      OPENAI_API_KEY: undefined,
+      OPENAI_ACCESS_TOKEN: undefined,
+      OPENAI_CODEX_ACCESS_TOKEN: undefined,
+    },
+    () => {
+      assert.throws(
+        () => loadConfig(),
+        /OPENAI_CODEX_ACCESS_TOKEN is required when RESEARCH_AGENT_MODEL_PROVIDER=openai-codex/,
       );
     },
   );

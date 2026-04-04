@@ -40,9 +40,12 @@ export async function buildResearchAgent(args: {
   workspaceRoot: string;
   sourceTracker: SourceTracker;
   model: string;
-  modelProvider: "vertex" | "openai" | "anthropic";
+  modelProvider: "vertex" | "openai" | "openai-codex" | "anthropic";
   openAiApiKey: string | undefined;
-  openAiAccessToken: string | undefined;
+  openAiCodexAccessToken: string | undefined;
+  openAiCodexRefreshToken: string | undefined;
+  openAiCodexExpiresAt: number | undefined;
+  openAiCodexAccountId: string | undefined;
   anthropicApiKey: string | undefined;
 }) {
   const backend = new FilesystemBackend({
@@ -57,7 +60,10 @@ export async function buildResearchAgent(args: {
     researchAgentModelProvider: args.modelProvider,
     researchAgentModel: args.model,
     openAiApiKey: args.openAiApiKey,
-    openAiAccessToken: args.openAiAccessToken,
+    openAiCodexAccessToken: args.openAiCodexAccessToken,
+    openAiCodexRefreshToken: args.openAiCodexRefreshToken,
+    openAiCodexExpiresAt: args.openAiCodexExpiresAt,
+    openAiCodexAccountId: args.openAiCodexAccountId,
     anthropicApiKey: args.anthropicApiKey,
   });
 

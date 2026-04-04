@@ -3,7 +3,13 @@ import type {
   BaseLanguageModelCallOptions,
 } from "@langchain/core/language_models/base";
 
-export type ResearchModelProvider = "vertex" | "openai" | "anthropic";
+import { resolveOpenAICodexSession } from "./openai-codex-auth.js";
+
+export type ResearchModelProvider =
+  | "vertex"
+  | "openai"
+  | "openai-codex"
+  | "anthropic";
 export type ResearchChatModel = BaseLanguageModel<
   unknown,
   BaseLanguageModelCallOptions
@@ -13,7 +19,10 @@ export type ResearchModelConfig = {
   researchAgentModelProvider: ResearchModelProvider;
   researchAgentModel: string;
   openAiApiKey: string | undefined;
-  openAiAccessToken: string | undefined;
+  openAiCodexAccessToken: string | undefined;
+  openAiCodexRefreshToken: string | undefined;
+  openAiCodexExpiresAt: number | undefined;
+  openAiCodexAccountId: string | undefined;
   anthropicApiKey: string | undefined;
 };
 
@@ -22,8 +31,46 @@ type ModelOptions = Record<string, unknown>;
 type CreateModelDeps = {
   createVertexModel?: (options: ModelOptions) => ResearchChatModel;
   createOpenAIModel?: (options: ModelOptions) => ResearchChatModel;
+  createOpenAICodexModel?: (options: ModelOptions) => ResearchChatModel;
   createAnthropicModel?: (options: ModelOptions) => ResearchChatModel;
 };
+
+const OPENAI_CODEX_BASE_URL = "https://chatgpt.com/backend-api/codex";
+
+function buildOpenAIModelOptions(config: ResearchModelConfig): ModelOptions {
+  return {
+    model: config.researchAgentModel,
+    apiKey: config.openAiApiKey,
+    maxRetries: 2,
+    useResponsesApi: true,
+  };
+}
+
+async function buildOpenAICodexModelOptions(
+  config: ResearchModelConfig,
+): Promise<ModelOptions> {
+  const session = await resolveOpenAICodexSession({
+    accessToken: config.openAiCodexAccessToken,
+    refreshToken: config.openAiCodexRefreshToken,
+    expiresAt: config.openAiCodexExpiresAt,
+    accountId: config.openAiCodexAccountId,
+  });
+
+  return {
+    model: config.researchAgentModel,
+    apiKey: session.accessToken,
+    maxRetries: 2,
+    useResponsesApi: true,
+    configuration: {
+      baseURL: OPENAI_CODEX_BASE_URL,
+      defaultHeaders: session.accountId
+        ? {
+            "ChatGPT-Account-Id": session.accountId,
+          }
+        : undefined,
+    },
+  };
+}
 
 async function loadVertexFactory() {
   try {
@@ -72,11 +119,15 @@ export async function createResearchModel(
     case "openai": {
       const createOpenAIModel =
         deps.createOpenAIModel ?? (await loadOpenAIFactory());
-      return createOpenAIModel({
-        model: config.researchAgentModel,
-        apiKey: config.openAiApiKey ?? config.openAiAccessToken,
-        maxRetries: 2,
-      });
+      return createOpenAIModel(buildOpenAIModelOptions(config));
+    }
+
+    case "openai-codex": {
+      const createOpenAICodexModel =
+        deps.createOpenAICodexModel ??
+        deps.createOpenAIModel ??
+        (await loadOpenAIFactory());
+      return createOpenAICodexModel(await buildOpenAICodexModelOptions(config));
     }
 
     case "anthropic": {

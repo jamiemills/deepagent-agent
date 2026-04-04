@@ -25,6 +25,18 @@ const optionalEnvString = z
   .optional()
   .transform((value) => (value && value.trim().length > 0 ? value : undefined));
 
+const optionalEnvNumber = z.preprocess((value) => {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+
+  if (typeof value === "string" && value.trim().length === 0) {
+    return undefined;
+  }
+
+  return value;
+}, z.coerce.number().optional());
+
 for (const candidate of envCandidates) {
   if (!fs.existsSync(candidate)) {
     continue;
@@ -49,7 +61,7 @@ const envSchema = z
     BRAVE_SEARCH_API_KEY: optionalEnvString,
     RESEARCH_AGENT_MODEL: z.string().default("gemini-3.1-pro-preview"),
     RESEARCH_AGENT_MODEL_PROVIDER: z
-      .enum(["vertex", "openai", "anthropic"])
+      .enum(["vertex", "openai", "openai-codex", "anthropic"])
       .default("vertex"),
     LANGSMITH_TRACING: optionalEnvString,
     LANGSMITH_API_KEY: optionalEnvString,
@@ -60,19 +72,35 @@ const envSchema = z
     GOOGLE_APPLICATION_CREDENTIALS: optionalEnvString,
     OPENAI_API_KEY: optionalEnvString,
     OPENAI_ACCESS_TOKEN: optionalEnvString,
+    OPENAI_CODEX_ACCESS_TOKEN: optionalEnvString,
+    OPENAI_CODEX_REFRESH_TOKEN: optionalEnvString,
+    OPENAI_CODEX_EXPIRES_AT: optionalEnvNumber,
+    OPENAI_CODEX_ACCOUNT_ID: optionalEnvString,
     ANTHROPIC_API_KEY: optionalEnvString,
   })
   .superRefine((value, context) => {
     if (
       value.RESEARCH_AGENT_MODEL_PROVIDER === "openai" &&
-      !value.OPENAI_API_KEY &&
+      !value.OPENAI_API_KEY
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["OPENAI_API_KEY"],
+        message:
+          "OPENAI_API_KEY is required when RESEARCH_AGENT_MODEL_PROVIDER=openai",
+      });
+    }
+
+    if (
+      value.RESEARCH_AGENT_MODEL_PROVIDER === "openai-codex" &&
+      !value.OPENAI_CODEX_ACCESS_TOKEN &&
       !value.OPENAI_ACCESS_TOKEN
     ) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ["OPENAI_ACCESS_TOKEN"],
+        path: ["OPENAI_CODEX_ACCESS_TOKEN"],
         message:
-          "OPENAI_API_KEY or OPENAI_ACCESS_TOKEN is required when RESEARCH_AGENT_MODEL_PROVIDER=openai",
+          "OPENAI_CODEX_ACCESS_TOKEN is required when RESEARCH_AGENT_MODEL_PROVIDER=openai-codex",
       });
     }
 
@@ -97,6 +125,8 @@ export function getLoadedEnvPath(): string | null {
 
 export function loadConfig() {
   const parsed = envSchema.parse(process.env);
+  const resolvedOpenAiCodexAccessToken =
+    parsed.OPENAI_CODEX_ACCESS_TOKEN ?? parsed.OPENAI_ACCESS_TOKEN;
 
   return {
     port: parsed.PORT,
@@ -116,7 +146,10 @@ export function loadConfig() {
     googleCloudLocation: parsed.GOOGLE_CLOUD_LOCATION,
     googleApplicationCredentials: parsed.GOOGLE_APPLICATION_CREDENTIALS,
     openAiApiKey: parsed.OPENAI_API_KEY,
-    openAiAccessToken: parsed.OPENAI_ACCESS_TOKEN,
+    openAiCodexAccessToken: resolvedOpenAiCodexAccessToken,
+    openAiCodexRefreshToken: parsed.OPENAI_CODEX_REFRESH_TOKEN,
+    openAiCodexExpiresAt: parsed.OPENAI_CODEX_EXPIRES_AT,
+    openAiCodexAccountId: parsed.OPENAI_CODEX_ACCOUNT_ID,
     anthropicApiKey: parsed.ANTHROPIC_API_KEY,
   };
 }

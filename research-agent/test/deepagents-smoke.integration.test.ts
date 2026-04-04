@@ -8,19 +8,27 @@ import { buildResearchAgent } from "../src/agent.js";
 import { loadConfig } from "../src/config.js";
 import { SourceTracker } from "../src/core/source-tracker.js";
 
-const config = loadConfig();
-const liveModel = config.researchAgentModel;
-const liveProvider = config.researchAgentModelProvider;
+const config = (() => {
+  try {
+    return loadConfig();
+  } catch {
+    return null;
+  }
+})();
+const liveModel = config?.researchAgentModel ?? "gemini-3.1-pro-preview";
+const liveProvider = config?.researchAgentModelProvider ?? "vertex";
 const runSmoke =
   process.env["RUN_DEEPAGENT_SMOKE"] === "1" &&
-  ((liveProvider === "openai" &&
-    Boolean(config.openAiApiKey || config.openAiAccessToken)) ||
-    (liveProvider === "anthropic" && Boolean(config.anthropicApiKey)) ||
+  Boolean(config) &&
+  ((liveProvider === "openai" && Boolean(config?.openAiApiKey)) ||
+    (liveProvider === "openai-codex" &&
+      Boolean(config?.openAiCodexAccessToken)) ||
+    (liveProvider === "anthropic" && Boolean(config?.anthropicApiKey)) ||
     (liveProvider === "vertex" &&
       Boolean(
-        config.googleApiKey ||
-          config.googleApplicationCredentials ||
-          config.googleCloudProject,
+        config?.googleApiKey ||
+          config?.googleApplicationCredentials ||
+          config?.googleCloudProject,
       )));
 
 async function withTempDir(fn: (dir: string) => Promise<void>) {
@@ -44,9 +52,12 @@ async function withTempDir(fn: (dir: string) => Promise<void>) {
         sourceTracker: tracker,
         model: liveModel,
         modelProvider: liveProvider,
-        openAiApiKey: config.openAiApiKey,
-        openAiAccessToken: config.openAiAccessToken,
-        anthropicApiKey: config.anthropicApiKey,
+        openAiApiKey: config?.openAiApiKey,
+        openAiCodexAccessToken: config?.openAiCodexAccessToken,
+        openAiCodexRefreshToken: config?.openAiCodexRefreshToken,
+        openAiCodexExpiresAt: config?.openAiCodexExpiresAt,
+        openAiCodexAccountId: config?.openAiCodexAccountId,
+        anthropicApiKey: config?.anthropicApiKey,
       });
 
       const result = await agent.invoke(

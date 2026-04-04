@@ -49,7 +49,10 @@ type ResearchRunDeps = {
     researchAgentModel: string;
     researchAgentModelProvider: ResearchModelProvider;
     openAiApiKey: string | undefined;
-    openAiAccessToken: string | undefined;
+    openAiCodexAccessToken: string | undefined;
+    openAiCodexRefreshToken: string | undefined;
+    openAiCodexExpiresAt: number | undefined;
+    openAiCodexAccountId: string | undefined;
     anthropicApiKey: string | undefined;
   };
   sourceTracker: SourceTracker;
@@ -59,7 +62,10 @@ type ResearchRunDeps = {
     model: string;
     modelProvider: ResearchModelProvider;
     openAiApiKey: string | undefined;
-    openAiAccessToken: string | undefined;
+    openAiCodexAccessToken: string | undefined;
+    openAiCodexRefreshToken: string | undefined;
+    openAiCodexExpiresAt: number | undefined;
+    openAiCodexAccountId: string | undefined;
     anthropicApiKey: string | undefined;
   }) => Promise<AgentLike>;
 };
@@ -164,7 +170,10 @@ export async function executeResearchRun(args: {
           researchAgentModel: resolvedConfig.researchAgentModel,
           researchAgentModelProvider: resolvedConfig.researchAgentModelProvider,
           openAiApiKey: resolvedConfig.openAiApiKey,
-          openAiAccessToken: resolvedConfig.openAiAccessToken,
+          openAiCodexAccessToken: resolvedConfig.openAiCodexAccessToken,
+          openAiCodexRefreshToken: resolvedConfig.openAiCodexRefreshToken,
+          openAiCodexExpiresAt: resolvedConfig.openAiCodexExpiresAt,
+          openAiCodexAccountId: resolvedConfig.openAiCodexAccountId,
           anthropicApiKey: resolvedConfig.anthropicApiKey,
         },
         sourceTracker: new SourceTracker(),
@@ -188,7 +197,10 @@ export async function executeResearchRun(args: {
       model: deps.config.researchAgentModel,
       modelProvider: deps.config.researchAgentModelProvider,
       openAiApiKey: deps.config.openAiApiKey,
-      openAiAccessToken: deps.config.openAiAccessToken,
+      openAiCodexAccessToken: deps.config.openAiCodexAccessToken,
+      openAiCodexRefreshToken: deps.config.openAiCodexRefreshToken,
+      openAiCodexExpiresAt: deps.config.openAiCodexExpiresAt,
+      openAiCodexAccountId: deps.config.openAiCodexAccountId,
       anthropicApiKey: deps.config.anthropicApiKey,
     });
 

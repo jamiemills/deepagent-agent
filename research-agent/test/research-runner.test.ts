@@ -30,9 +30,12 @@ function makeDeps(
     workspaceRoot: string;
     sourceTracker: SourceTracker;
     model: string;
-    modelProvider: "vertex" | "openai" | "anthropic";
+    modelProvider: "vertex" | "openai" | "openai-codex" | "anthropic";
     openAiApiKey: string | undefined;
-    openAiAccessToken: string | undefined;
+    openAiCodexAccessToken: string | undefined;
+    openAiCodexRefreshToken: string | undefined;
+    openAiCodexExpiresAt: number | undefined;
+    openAiCodexAccountId: string | undefined;
     anthropicApiKey: string | undefined;
   }) => Promise<{
     invoke(
@@ -47,7 +50,10 @@ function makeDeps(
       researchAgentModel: "test-model",
       researchAgentModelProvider: "vertex" as const,
       openAiApiKey: undefined,
-      openAiAccessToken: undefined,
+      openAiCodexAccessToken: undefined,
+      openAiCodexRefreshToken: undefined,
+      openAiCodexExpiresAt: undefined,
+      openAiCodexAccountId: undefined,
       anthropicApiKey: undefined,
     },
     sourceTracker,
@@ -301,9 +307,12 @@ test("executeResearchRun passes provider configuration into agent construction",
           workspaceRoot: string;
           sourceTracker: SourceTracker;
           model: string;
-          modelProvider: "vertex" | "openai" | "anthropic";
+          modelProvider: "vertex" | "openai" | "openai-codex" | "anthropic";
           openAiApiKey: string | undefined;
-          openAiAccessToken: string | undefined;
+          openAiCodexAccessToken: string | undefined;
+          openAiCodexRefreshToken: string | undefined;
+          openAiCodexExpiresAt: number | undefined;
+          openAiCodexAccountId: string | undefined;
           anthropicApiKey: string | undefined;
         }
       | undefined;
@@ -327,7 +336,10 @@ test("executeResearchRun passes provider configuration into agent construction",
           researchAgentModel: "claude-3-7-sonnet-latest",
           researchAgentModelProvider: "anthropic",
           openAiApiKey: undefined,
-          openAiAccessToken: undefined,
+          openAiCodexAccessToken: undefined,
+          openAiCodexRefreshToken: undefined,
+          openAiCodexExpiresAt: undefined,
+          openAiCodexAccountId: undefined,
           anthropicApiKey: "sk-ant-test",
         },
         sourceTracker: new SourceTracker(),
@@ -357,20 +369,23 @@ test("executeResearchRun passes provider configuration into agent construction",
   });
 });
 
-test("executeResearchRun passes an OpenAI access token into agent construction", async () => {
+test("executeResearchRun passes OpenAI Codex OAuth settings into agent construction", async () => {
   await withTempDir(async (dir) => {
     const metadataStore = new FileMetadataStore(path.join(dir, "metadata"));
     const artifactStore = new FileArtifactStore(path.join(dir, "artifacts"));
-    const runId = "run-openai-access-token";
+    const runId = "run-openai-codex-token";
     const prompt = "Research something";
     let receivedArgs:
       | {
           workspaceRoot: string;
           sourceTracker: SourceTracker;
           model: string;
-          modelProvider: "vertex" | "openai" | "anthropic";
+          modelProvider: "vertex" | "openai" | "openai-codex" | "anthropic";
           openAiApiKey: string | undefined;
-          openAiAccessToken: string | undefined;
+          openAiCodexAccessToken: string | undefined;
+          openAiCodexRefreshToken: string | undefined;
+          openAiCodexExpiresAt: number | undefined;
+          openAiCodexAccountId: string | undefined;
           anthropicApiKey: string | undefined;
         }
       | undefined;
@@ -391,10 +406,13 @@ test("executeResearchRun passes an OpenAI access token into agent construction",
       deps: {
         config: {
           dataDir: dir,
-          researchAgentModel: "gpt-4.1-mini",
-          researchAgentModelProvider: "openai",
+          researchAgentModel: "gpt-5.4-codex",
+          researchAgentModelProvider: "openai-codex",
           openAiApiKey: undefined,
-          openAiAccessToken: "oidc-access-token",
+          openAiCodexAccessToken: "codex-access-token",
+          openAiCodexRefreshToken: "codex-refresh-token",
+          openAiCodexExpiresAt: 1746230400000,
+          openAiCodexAccountId: "acct-codex",
           anthropicApiKey: undefined,
         },
         sourceTracker: new SourceTracker(),
@@ -418,9 +436,12 @@ test("executeResearchRun passes an OpenAI access token into agent construction",
       },
     });
 
-    assert.equal(receivedArgs?.modelProvider, "openai");
-    assert.equal(receivedArgs?.model, "gpt-4.1-mini");
-    assert.equal(receivedArgs?.openAiAccessToken, "oidc-access-token");
+    assert.equal(receivedArgs?.modelProvider, "openai-codex");
+    assert.equal(receivedArgs?.model, "gpt-5.4-codex");
+    assert.equal(receivedArgs?.openAiCodexAccessToken, "codex-access-token");
+    assert.equal(receivedArgs?.openAiCodexRefreshToken, "codex-refresh-token");
+    assert.equal(receivedArgs?.openAiCodexExpiresAt, 1746230400000);
+    assert.equal(receivedArgs?.openAiCodexAccountId, "acct-codex");
     assert.equal(receivedArgs?.openAiApiKey, undefined);
   });
 });

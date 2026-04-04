@@ -10,6 +10,7 @@ const runLiveCliLocal =
   process.env["RUN_LIVE_CLI_LOCAL_TEST"] === "1" &&
   Boolean(
     process.env["OPENAI_API_KEY"] ||
+      process.env["OPENAI_CODEX_ACCESS_TOKEN"] ||
       process.env["OPENAI_ACCESS_TOKEN"] ||
       process.env["ANTHROPIC_API_KEY"] ||
       process.env["GOOGLE_API_KEY"] ||
