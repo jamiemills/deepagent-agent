@@ -78,7 +78,7 @@ You need:
 
 - Bun `1.3+`
 - a valid `BRAVE_SEARCH_API_KEY`
-- one model provider configuration: Vertex, OpenAI, or Anthropic
+- one model provider configuration: Vertex, OpenAI API, OpenAI Codex OAuth, or Anthropic
 - Temporal only if you want hosted durable execution
 
 For `RESEARCH_AGENT_MODEL_PROVIDER=vertex`, the current setup assumes one of:
@@ -90,7 +90,13 @@ For `RESEARCH_AGENT_MODEL_PROVIDER=vertex`, the current setup assumes one of:
 For `RESEARCH_AGENT_MODEL_PROVIDER=openai`, set:
 
 - `OPENAI_API_KEY`
-- `OPENAI_ACCESS_TOKEN`
+
+For `RESEARCH_AGENT_MODEL_PROVIDER=openai-codex`, set:
+
+- `OPENAI_CODEX_ACCESS_TOKEN`
+- optionally `OPENAI_CODEX_ACCOUNT_ID`
+- optionally `OPENAI_CODEX_REFRESH_TOKEN`
+- optionally `OPENAI_CODEX_EXPIRES_AT`
 
 For `RESEARCH_AGENT_MODEL_PROVIDER=anthropic`, set:
 
@@ -137,7 +143,10 @@ Important variables:
 - `RESEARCH_AGENT_MODEL_PROVIDER`
 - `RESEARCH_AGENT_MODEL`
 - `OPENAI_API_KEY`
-- `OPENAI_ACCESS_TOKEN`
+- `OPENAI_CODEX_ACCESS_TOKEN`
+- `OPENAI_CODEX_REFRESH_TOKEN`
+- `OPENAI_CODEX_EXPIRES_AT`
+- `OPENAI_CODEX_ACCOUNT_ID`
 - `ANTHROPIC_API_KEY`
 - `GOOGLE_CLOUD_PROJECT`
 - `GOOGLE_CLOUD_LOCATION`
@@ -174,10 +183,11 @@ RESEARCH_AGENT_MODEL_PROVIDER=openai
 RESEARCH_AGENT_MODEL=gpt-4.1
 OPENAI_API_KEY=your-openai-key
 
-# OpenAI OAuth / OIDC access token
-RESEARCH_AGENT_MODEL_PROVIDER=openai
-RESEARCH_AGENT_MODEL=gpt-4.1
-OPENAI_ACCESS_TOKEN=your-openai-access-token
+# OpenAI Codex OAuth
+RESEARCH_AGENT_MODEL_PROVIDER=openai-codex
+RESEARCH_AGENT_MODEL=gpt-5.4-codex
+OPENAI_CODEX_ACCESS_TOKEN=your-codex-access-token
+OPENAI_CODEX_ACCOUNT_ID=your-chatgpt-account-id
 
 # Anthropic
 RESEARCH_AGENT_MODEL_PROVIDER=anthropic
@@ -185,7 +195,13 @@ RESEARCH_AGENT_MODEL=claude-3-7-sonnet-latest
 ANTHROPIC_API_KEY=your-anthropic-key
 ```
 
-The runtime selects the chat model from `RESEARCH_AGENT_MODEL_PROVIDER`. For OpenAI, either `OPENAI_API_KEY` or `OPENAI_ACCESS_TOKEN` is accepted. Vertex remains the default so existing `.env` files keep working.
+The runtime selects the chat model from `RESEARCH_AGENT_MODEL_PROVIDER`.
+
+- `openai` uses the standard OpenAI API at `https://api.openai.com/v1` and requires `OPENAI_API_KEY`.
+- `openai-codex` uses the ChatGPT Codex backend at `https://chatgpt.com/backend-api/codex` and requires `OPENAI_CODEX_ACCESS_TOKEN`.
+- `OPENAI_ACCESS_TOKEN` is still accepted as a deprecated alias for `OPENAI_CODEX_ACCESS_TOKEN` during migration.
+
+Vertex remains the default so existing Vertex-based `.env` files keep working.
 
 ## How To Run It
 
@@ -392,6 +408,13 @@ The live tests cover:
 - a real Deep Agents smoke run
 - a real local CLI run
 
+For live model tests:
+
+- `openai` requires `OPENAI_API_KEY`
+- `openai-codex` requires `OPENAI_CODEX_ACCESS_TOKEN`
+- `anthropic` requires `ANTHROPIC_API_KEY`
+- `vertex` requires one of the configured Google auth paths
+
 ## Project Layout
 
 - `src/agent.ts`: Deep Agents configuration and subagents
@@ -427,6 +450,8 @@ If live tests fail:
 
 - confirm network access is available
 - confirm the required env variables are present in the loaded `.env`
+- confirm `RESEARCH_AGENT_MODEL_PROVIDER` matches the credential type you configured
+- do not use ChatGPT/Codex OAuth tokens against `api.openai.com`
 
 ## Limitations
 
