@@ -13,6 +13,7 @@ export type ResearchModelConfig = {
   researchAgentModelProvider: ResearchModelProvider;
   researchAgentModel: string;
   openAiApiKey: string | undefined;
+  openAiAccessToken: string | undefined;
   anthropicApiKey: string | undefined;
 };
 
@@ -73,7 +74,7 @@ export async function createResearchModel(
         deps.createOpenAIModel ?? (await loadOpenAIFactory());
       return createOpenAIModel({
         model: config.researchAgentModel,
-        apiKey: config.openAiApiKey,
+        apiKey: config.openAiApiKey ?? config.openAiAccessToken,
         maxRetries: 2,
       });
     }

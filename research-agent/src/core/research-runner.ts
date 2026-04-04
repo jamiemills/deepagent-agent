@@ -49,6 +49,7 @@ type ResearchRunDeps = {
     researchAgentModel: string;
     researchAgentModelProvider: ResearchModelProvider;
     openAiApiKey: string | undefined;
+    openAiAccessToken: string | undefined;
     anthropicApiKey: string | undefined;
   };
   sourceTracker: SourceTracker;
@@ -58,6 +59,7 @@ type ResearchRunDeps = {
     model: string;
     modelProvider: ResearchModelProvider;
     openAiApiKey: string | undefined;
+    openAiAccessToken: string | undefined;
     anthropicApiKey: string | undefined;
   }) => Promise<AgentLike>;
 };
@@ -162,6 +164,7 @@ export async function executeResearchRun(args: {
           researchAgentModel: resolvedConfig.researchAgentModel,
           researchAgentModelProvider: resolvedConfig.researchAgentModelProvider,
           openAiApiKey: resolvedConfig.openAiApiKey,
+          openAiAccessToken: resolvedConfig.openAiAccessToken,
           anthropicApiKey: resolvedConfig.anthropicApiKey,
         },
         sourceTracker: new SourceTracker(),
@@ -185,6 +188,7 @@ export async function executeResearchRun(args: {
       model: deps.config.researchAgentModel,
       modelProvider: deps.config.researchAgentModelProvider,
       openAiApiKey: deps.config.openAiApiKey,
+      openAiAccessToken: deps.config.openAiAccessToken,
       anthropicApiKey: deps.config.anthropicApiKey,
     });
 

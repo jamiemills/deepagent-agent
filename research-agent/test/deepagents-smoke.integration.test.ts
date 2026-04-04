@@ -13,7 +13,8 @@ const liveModel = config.researchAgentModel;
 const liveProvider = config.researchAgentModelProvider;
 const runSmoke =
   process.env["RUN_DEEPAGENT_SMOKE"] === "1" &&
-  ((liveProvider === "openai" && Boolean(config.openAiApiKey)) ||
+  ((liveProvider === "openai" &&
+    Boolean(config.openAiApiKey || config.openAiAccessToken)) ||
     (liveProvider === "anthropic" && Boolean(config.anthropicApiKey)) ||
     (liveProvider === "vertex" &&
       Boolean(
@@ -44,6 +45,7 @@ async function withTempDir(fn: (dir: string) => Promise<void>) {
         model: liveModel,
         modelProvider: liveProvider,
         openAiApiKey: config.openAiApiKey,
+        openAiAccessToken: config.openAiAccessToken,
         anthropicApiKey: config.anthropicApiKey,
       });
 

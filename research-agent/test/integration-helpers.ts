@@ -66,6 +66,7 @@ export function createInlineTemporalClient(args: {
                   researchAgentModel: "test-model",
                   researchAgentModelProvider: "vertex",
                   openAiApiKey: undefined,
+                  openAiAccessToken: undefined,
                   anthropicApiKey: undefined,
                 },
                 sourceTracker: new SourceTracker(),

@@ -90,6 +90,7 @@ For `RESEARCH_AGENT_MODEL_PROVIDER=vertex`, the current setup assumes one of:
 For `RESEARCH_AGENT_MODEL_PROVIDER=openai`, set:
 
 - `OPENAI_API_KEY`
+- `OPENAI_ACCESS_TOKEN`
 
 For `RESEARCH_AGENT_MODEL_PROVIDER=anthropic`, set:
 
@@ -136,6 +137,7 @@ Important variables:
 - `RESEARCH_AGENT_MODEL_PROVIDER`
 - `RESEARCH_AGENT_MODEL`
 - `OPENAI_API_KEY`
+- `OPENAI_ACCESS_TOKEN`
 - `ANTHROPIC_API_KEY`
 - `GOOGLE_CLOUD_PROJECT`
 - `GOOGLE_CLOUD_LOCATION`
@@ -172,13 +174,18 @@ RESEARCH_AGENT_MODEL_PROVIDER=openai
 RESEARCH_AGENT_MODEL=gpt-4.1
 OPENAI_API_KEY=your-openai-key
 
+# OpenAI OAuth / OIDC access token
+RESEARCH_AGENT_MODEL_PROVIDER=openai
+RESEARCH_AGENT_MODEL=gpt-4.1
+OPENAI_ACCESS_TOKEN=your-openai-access-token
+
 # Anthropic
 RESEARCH_AGENT_MODEL_PROVIDER=anthropic
 RESEARCH_AGENT_MODEL=claude-3-7-sonnet-latest
 ANTHROPIC_API_KEY=your-anthropic-key
 ```
 
-The runtime selects the chat model from `RESEARCH_AGENT_MODEL_PROVIDER`. Vertex remains the default so existing `.env` files keep working.
+The runtime selects the chat model from `RESEARCH_AGENT_MODEL_PROVIDER`. For OpenAI, either `OPENAI_API_KEY` or `OPENAI_ACCESS_TOKEN` is accepted. Vertex remains the default so existing `.env` files keep working.
 
 ## How To Run It
 

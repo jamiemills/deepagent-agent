@@ -59,18 +59,20 @@ const envSchema = z
     GOOGLE_CLOUD_LOCATION: optionalEnvString,
     GOOGLE_APPLICATION_CREDENTIALS: optionalEnvString,
     OPENAI_API_KEY: optionalEnvString,
+    OPENAI_ACCESS_TOKEN: optionalEnvString,
     ANTHROPIC_API_KEY: optionalEnvString,
   })
   .superRefine((value, context) => {
     if (
       value.RESEARCH_AGENT_MODEL_PROVIDER === "openai" &&
-      !value.OPENAI_API_KEY
+      !value.OPENAI_API_KEY &&
+      !value.OPENAI_ACCESS_TOKEN
     ) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ["OPENAI_API_KEY"],
+        path: ["OPENAI_ACCESS_TOKEN"],
         message:
-          "OPENAI_API_KEY is required when RESEARCH_AGENT_MODEL_PROVIDER=openai",
+          "OPENAI_API_KEY or OPENAI_ACCESS_TOKEN is required when RESEARCH_AGENT_MODEL_PROVIDER=openai",
       });
     }
 
@@ -114,6 +116,7 @@ export function loadConfig() {
     googleCloudLocation: parsed.GOOGLE_CLOUD_LOCATION,
     googleApplicationCredentials: parsed.GOOGLE_APPLICATION_CREDENTIALS,
     openAiApiKey: parsed.OPENAI_API_KEY,
+    openAiAccessToken: parsed.OPENAI_ACCESS_TOKEN,
     anthropicApiKey: parsed.ANTHROPIC_API_KEY,
   };
 }

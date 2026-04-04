@@ -41,7 +41,12 @@ test("config exposes the loaded env path and required defaults", () => {
   );
   assert.equal(typeof config.port, "number");
   assert.equal(typeof config.researchAgentModel, "string");
-  assert.equal(config.researchAgentModelProvider, "vertex");
+  assert.equal(
+    ["vertex", "openai", "anthropic"].includes(
+      config.researchAgentModelProvider,
+    ),
+    true,
+  );
 });
 
 test("config reads OpenAI provider settings from env", async () => {
@@ -58,6 +63,24 @@ test("config reads OpenAI provider settings from env", async () => {
       assert.equal(config.researchAgentModelProvider, "openai");
       assert.equal(config.researchAgentModel, "gpt-4.1-mini");
       assert.equal(config.openAiApiKey, "sk-openai-test");
+    },
+  );
+});
+
+test("config accepts an OpenAI access token as the openai credential", async () => {
+  await withEnv(
+    {
+      RESEARCH_AGENT_MODEL_PROVIDER: "openai",
+      RESEARCH_AGENT_MODEL: "gpt-4.1-mini",
+      OPENAI_API_KEY: undefined,
+      OPENAI_ACCESS_TOKEN: "oidc-access-token",
+    },
+    () => {
+      const config = loadConfig();
+
+      assert.equal(config.researchAgentModelProvider, "openai");
+      assert.equal(config.openAiAccessToken, "oidc-access-token");
+      assert.equal(config.openAiApiKey, undefined);
     },
   );
 });
@@ -85,11 +108,12 @@ test("config rejects an OpenAI provider selection without an API key", async () 
     {
       RESEARCH_AGENT_MODEL_PROVIDER: "openai",
       OPENAI_API_KEY: undefined,
+      OPENAI_ACCESS_TOKEN: undefined,
     },
     () => {
       assert.throws(
         () => loadConfig(),
-        /OPENAI_API_KEY is required when RESEARCH_AGENT_MODEL_PROVIDER=openai/,
+        /OPENAI_API_KEY or OPENAI_ACCESS_TOKEN is required when RESEARCH_AGENT_MODEL_PROVIDER=openai/,
       );
     },
   );

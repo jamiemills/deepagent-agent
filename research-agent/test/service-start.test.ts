@@ -38,6 +38,7 @@ test("createServiceApp builds an app with the configured task queue without auto
       googleCloudLocation: undefined,
       googleApplicationCredentials: undefined,
       openAiApiKey: undefined,
+      openAiAccessToken: undefined,
       anthropicApiKey: undefined,
     },
     temporalClient: temporalClient as never,

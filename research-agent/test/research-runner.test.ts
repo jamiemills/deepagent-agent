@@ -32,6 +32,7 @@ function makeDeps(
     model: string;
     modelProvider: "vertex" | "openai" | "anthropic";
     openAiApiKey: string | undefined;
+    openAiAccessToken: string | undefined;
     anthropicApiKey: string | undefined;
   }) => Promise<{
     invoke(
@@ -46,6 +47,7 @@ function makeDeps(
       researchAgentModel: "test-model",
       researchAgentModelProvider: "vertex" as const,
       openAiApiKey: undefined,
+      openAiAccessToken: undefined,
       anthropicApiKey: undefined,
     },
     sourceTracker,
@@ -301,6 +303,7 @@ test("executeResearchRun passes provider configuration into agent construction",
           model: string;
           modelProvider: "vertex" | "openai" | "anthropic";
           openAiApiKey: string | undefined;
+          openAiAccessToken: string | undefined;
           anthropicApiKey: string | undefined;
         }
       | undefined;
@@ -324,6 +327,7 @@ test("executeResearchRun passes provider configuration into agent construction",
           researchAgentModel: "claude-3-7-sonnet-latest",
           researchAgentModelProvider: "anthropic",
           openAiApiKey: undefined,
+          openAiAccessToken: undefined,
           anthropicApiKey: "sk-ant-test",
         },
         sourceTracker: new SourceTracker(),
@@ -350,5 +354,73 @@ test("executeResearchRun passes provider configuration into agent construction",
     assert.equal(receivedArgs?.modelProvider, "anthropic");
     assert.equal(receivedArgs?.model, "claude-3-7-sonnet-latest");
     assert.equal(receivedArgs?.anthropicApiKey, "sk-ant-test");
+  });
+});
+
+test("executeResearchRun passes an OpenAI access token into agent construction", async () => {
+  await withTempDir(async (dir) => {
+    const metadataStore = new FileMetadataStore(path.join(dir, "metadata"));
+    const artifactStore = new FileArtifactStore(path.join(dir, "artifacts"));
+    const runId = "run-openai-access-token";
+    const prompt = "Research something";
+    let receivedArgs:
+      | {
+          workspaceRoot: string;
+          sourceTracker: SourceTracker;
+          model: string;
+          modelProvider: "vertex" | "openai" | "anthropic";
+          openAiApiKey: string | undefined;
+          openAiAccessToken: string | undefined;
+          anthropicApiKey: string | undefined;
+        }
+      | undefined;
+
+    await createRunRecord({
+      request: { prompt },
+      executionMode: "local",
+      metadataStore,
+      runId,
+    });
+
+    await executeResearchRun({
+      runId,
+      request: { prompt },
+      executionMode: "local",
+      metadataStore,
+      artifactStore,
+      deps: {
+        config: {
+          dataDir: dir,
+          researchAgentModel: "gpt-4.1-mini",
+          researchAgentModelProvider: "openai",
+          openAiApiKey: undefined,
+          openAiAccessToken: "oidc-access-token",
+          anthropicApiKey: undefined,
+        },
+        sourceTracker: new SourceTracker(),
+        buildAgent: async (args) => {
+          receivedArgs = args;
+          await fs.mkdir(path.join(args.workspaceRoot, "out"), {
+            recursive: true,
+          });
+          await fs.writeFile(
+            path.join(args.workspaceRoot, "out", "final-report.md"),
+            "Report body",
+          );
+          return {
+            async invoke() {
+              return {
+                messages: [{ type: "ai", content: "fallback report text" }],
+              };
+            },
+          };
+        },
+      },
+    });
+
+    assert.equal(receivedArgs?.modelProvider, "openai");
+    assert.equal(receivedArgs?.model, "gpt-4.1-mini");
+    assert.equal(receivedArgs?.openAiAccessToken, "oidc-access-token");
+    assert.equal(receivedArgs?.openAiApiKey, undefined);
   });
 });

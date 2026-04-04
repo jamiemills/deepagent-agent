@@ -42,6 +42,7 @@ export async function buildResearchAgent(args: {
   model: string;
   modelProvider: "vertex" | "openai" | "anthropic";
   openAiApiKey: string | undefined;
+  openAiAccessToken: string | undefined;
   anthropicApiKey: string | undefined;
 }) {
   const backend = new FilesystemBackend({
@@ -56,6 +57,7 @@ export async function buildResearchAgent(args: {
     researchAgentModelProvider: args.modelProvider,
     researchAgentModel: args.model,
     openAiApiKey: args.openAiApiKey,
+    openAiAccessToken: args.openAiAccessToken,
     anthropicApiKey: args.anthropicApiKey,
   });
 
