@@ -19,6 +19,7 @@ test("vertex provider exposes the loaded env path and defaults", async () => {
   await withEnv(
     {
       RESEARCH_AGENT_MODEL_PROVIDER: "vertex",
+      RESEARCH_AGENT_MODEL_VERTEX: undefined,
       OPENAI_API_KEY: undefined,
       OPENAI_ACCESS_TOKEN: undefined,
       OPENAI_CODEX_ACCESS_TOKEN: undefined,
@@ -38,6 +39,25 @@ test("vertex provider exposes the loaded env path and defaults", async () => {
       assert.equal(config.researchAgentModelProvider, "vertex");
       assert.equal(typeof config.port, "number");
       assert.equal(typeof config.researchAgentModel, "string");
+    },
+  );
+});
+
+test("vertex provider prefers its provider-specific model env var", async () => {
+  await withEnv(
+    {
+      RESEARCH_AGENT_MODEL_PROVIDER: "vertex",
+      RESEARCH_AGENT_MODEL: "shared-model",
+      RESEARCH_AGENT_MODEL_VERTEX: "gemini-2.0-flash-lite",
+      OPENAI_API_KEY: undefined,
+      OPENAI_ACCESS_TOKEN: undefined,
+      OPENAI_CODEX_ACCESS_TOKEN: undefined,
+      ANTHROPIC_API_KEY: undefined,
+    },
+    () => {
+      const config = loadConfig();
+
+      assert.equal(config.researchAgentModel, "gemini-2.0-flash-lite");
     },
   );
 });

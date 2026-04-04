@@ -20,6 +20,7 @@ test("anthropic provider reads config from env", async () => {
     {
       RESEARCH_AGENT_MODEL_PROVIDER: "anthropic",
       RESEARCH_AGENT_MODEL: "claude-3-7-sonnet-latest",
+      RESEARCH_AGENT_MODEL_ANTHROPIC: undefined,
       ANTHROPIC_API_KEY: "sk-ant-test",
       OPENAI_API_KEY: undefined,
       OPENAI_ACCESS_TOKEN: undefined,
@@ -36,10 +37,27 @@ test("anthropic provider reads config from env", async () => {
   );
 });
 
+test("anthropic provider prefers its provider-specific model env var", async () => {
+  await withEnv(
+    {
+      RESEARCH_AGENT_MODEL_PROVIDER: "anthropic",
+      RESEARCH_AGENT_MODEL: "shared-model",
+      RESEARCH_AGENT_MODEL_ANTHROPIC: "claude-3-7-sonnet-latest",
+      ANTHROPIC_API_KEY: "sk-ant-test",
+    },
+    () => {
+      const config = loadConfig();
+
+      assert.equal(config.researchAgentModel, "claude-3-7-sonnet-latest");
+    },
+  );
+});
+
 test("anthropic provider requires ANTHROPIC_API_KEY", async () => {
   await withEnv(
     {
       RESEARCH_AGENT_MODEL_PROVIDER: "anthropic",
+      RESEARCH_AGENT_MODEL_ANTHROPIC: undefined,
       ANTHROPIC_API_KEY: undefined,
       OPENAI_API_KEY: "sk-openai-test",
     },

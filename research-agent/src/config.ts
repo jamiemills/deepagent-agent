@@ -37,6 +37,8 @@ const optionalEnvNumber = z.preprocess((value) => {
   return value;
 }, z.coerce.number().optional());
 
+type ResearchModelProvider = "vertex" | "openai" | "openai-codex" | "anthropic";
+
 for (const candidate of envCandidates) {
   if (!fs.existsSync(candidate)) {
     continue;
@@ -63,6 +65,10 @@ const envSchema = z
     RESEARCH_AGENT_MODEL_PROVIDER: z
       .enum(["vertex", "openai", "openai-codex", "anthropic"])
       .default("vertex"),
+    RESEARCH_AGENT_MODEL_VERTEX: optionalEnvString,
+    RESEARCH_AGENT_MODEL_OPENAI: optionalEnvString,
+    RESEARCH_AGENT_MODEL_OPENAI_CODEX: optionalEnvString,
+    RESEARCH_AGENT_MODEL_ANTHROPIC: optionalEnvString,
     LANGSMITH_TRACING: optionalEnvString,
     LANGSMITH_API_KEY: optionalEnvString,
     LANGSMITH_PROJECT: optionalEnvString,
@@ -123,10 +129,40 @@ export function getLoadedEnvPath(): string | null {
   return loadedEnvPath;
 }
 
+function resolveResearchAgentModel(args: {
+  provider: ResearchModelProvider;
+  fallbackModel: string;
+  vertexModel: string | undefined;
+  openAiModel: string | undefined;
+  openAiCodexModel: string | undefined;
+  anthropicModel: string | undefined;
+}) {
+  switch (args.provider) {
+    case "vertex":
+      return args.vertexModel ?? args.fallbackModel;
+    case "openai":
+      return args.openAiModel ?? args.fallbackModel;
+    case "openai-codex":
+      return args.openAiCodexModel ?? args.fallbackModel;
+    case "anthropic":
+      return args.anthropicModel ?? args.fallbackModel;
+    default:
+      return args.fallbackModel;
+  }
+}
+
 export function loadConfig() {
   const parsed = envSchema.parse(process.env);
   const resolvedOpenAiCodexAccessToken =
     parsed.OPENAI_CODEX_ACCESS_TOKEN ?? parsed.OPENAI_ACCESS_TOKEN;
+  const resolvedResearchAgentModel = resolveResearchAgentModel({
+    provider: parsed.RESEARCH_AGENT_MODEL_PROVIDER,
+    fallbackModel: parsed.RESEARCH_AGENT_MODEL,
+    vertexModel: parsed.RESEARCH_AGENT_MODEL_VERTEX,
+    openAiModel: parsed.RESEARCH_AGENT_MODEL_OPENAI,
+    openAiCodexModel: parsed.RESEARCH_AGENT_MODEL_OPENAI_CODEX,
+    anthropicModel: parsed.RESEARCH_AGENT_MODEL_ANTHROPIC,
+  });
 
   return {
     port: parsed.PORT,
@@ -136,7 +172,7 @@ export function loadConfig() {
     temporalNamespace: parsed.TEMPORAL_NAMESPACE,
     temporalTaskQueue: parsed.TEMPORAL_TASK_QUEUE,
     braveSearchApiKey: parsed.BRAVE_SEARCH_API_KEY,
-    researchAgentModel: parsed.RESEARCH_AGENT_MODEL,
+    researchAgentModel: resolvedResearchAgentModel,
     researchAgentModelProvider: parsed.RESEARCH_AGENT_MODEL_PROVIDER,
     langsmithTracing: parsed.LANGSMITH_TRACING,
     langsmithApiKey: parsed.LANGSMITH_API_KEY,

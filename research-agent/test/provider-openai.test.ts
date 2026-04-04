@@ -20,6 +20,7 @@ test("openai provider reads config from env", async () => {
     {
       RESEARCH_AGENT_MODEL_PROVIDER: "openai",
       RESEARCH_AGENT_MODEL: "gpt-4.1-mini",
+      RESEARCH_AGENT_MODEL_OPENAI: undefined,
       OPENAI_API_KEY: "sk-openai-test",
       OPENAI_ACCESS_TOKEN: undefined,
       OPENAI_CODEX_ACCESS_TOKEN: undefined,
@@ -36,11 +37,28 @@ test("openai provider reads config from env", async () => {
   );
 });
 
+test("openai provider prefers its provider-specific model env var", async () => {
+  await withEnv(
+    {
+      RESEARCH_AGENT_MODEL_PROVIDER: "openai",
+      RESEARCH_AGENT_MODEL: "shared-model",
+      RESEARCH_AGENT_MODEL_OPENAI: "gpt-4.1-mini",
+      OPENAI_API_KEY: "sk-openai-test",
+    },
+    () => {
+      const config = loadConfig();
+
+      assert.equal(config.researchAgentModel, "gpt-4.1-mini");
+    },
+  );
+});
+
 test("openai provider requires OPENAI_API_KEY", async () => {
   await withEnv(
     {
       RESEARCH_AGENT_MODEL_PROVIDER: "openai",
       OPENAI_API_KEY: undefined,
+      RESEARCH_AGENT_MODEL_OPENAI: undefined,
       OPENAI_ACCESS_TOKEN: undefined,
       OPENAI_CODEX_ACCESS_TOKEN: "codex-access-token",
     },

@@ -20,6 +20,7 @@ test("openai-codex provider reads config from env", async () => {
     {
       RESEARCH_AGENT_MODEL_PROVIDER: "openai-codex",
       RESEARCH_AGENT_MODEL: "gpt-5.4-codex",
+      RESEARCH_AGENT_MODEL_OPENAI_CODEX: undefined,
       OPENAI_API_KEY: undefined,
       OPENAI_ACCESS_TOKEN: undefined,
       OPENAI_CODEX_ACCESS_TOKEN: "codex-access-token",
@@ -42,11 +43,28 @@ test("openai-codex provider reads config from env", async () => {
   );
 });
 
+test("openai-codex provider prefers its provider-specific model env var", async () => {
+  await withEnv(
+    {
+      RESEARCH_AGENT_MODEL_PROVIDER: "openai-codex",
+      RESEARCH_AGENT_MODEL: "shared-model",
+      RESEARCH_AGENT_MODEL_OPENAI_CODEX: "gpt-5.2",
+      OPENAI_CODEX_ACCESS_TOKEN: "codex-access-token",
+    },
+    () => {
+      const config = loadConfig();
+
+      assert.equal(config.researchAgentModel, "gpt-5.2");
+    },
+  );
+});
+
 test("openai-codex provider maps OPENAI_ACCESS_TOKEN as a deprecated alias", async () => {
   await withEnv(
     {
       RESEARCH_AGENT_MODEL_PROVIDER: "openai-codex",
       RESEARCH_AGENT_MODEL: "gpt-5.4-codex",
+      RESEARCH_AGENT_MODEL_OPENAI_CODEX: undefined,
       OPENAI_API_KEY: undefined,
       OPENAI_ACCESS_TOKEN: "legacy-codex-token",
       OPENAI_CODEX_ACCESS_TOKEN: undefined,
@@ -68,6 +86,7 @@ test("openai-codex provider requires OPENAI_CODEX_ACCESS_TOKEN", async () => {
   await withEnv(
     {
       RESEARCH_AGENT_MODEL_PROVIDER: "openai-codex",
+      RESEARCH_AGENT_MODEL_OPENAI_CODEX: undefined,
       OPENAI_API_KEY: undefined,
       OPENAI_ACCESS_TOKEN: undefined,
       OPENAI_CODEX_ACCESS_TOKEN: undefined,

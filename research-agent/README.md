@@ -142,6 +142,10 @@ Important variables:
 - `BRAVE_SEARCH_API_KEY`
 - `RESEARCH_AGENT_MODEL_PROVIDER`
 - `RESEARCH_AGENT_MODEL`
+- `RESEARCH_AGENT_MODEL_VERTEX`
+- `RESEARCH_AGENT_MODEL_OPENAI`
+- `RESEARCH_AGENT_MODEL_OPENAI_CODEX`
+- `RESEARCH_AGENT_MODEL_ANTHROPIC`
 - `OPENAI_API_KEY`
 - `OPENAI_CODEX_ACCESS_TOKEN`
 - `OPENAI_CODEX_REFRESH_TOKEN`
@@ -176,26 +180,35 @@ Provider examples:
 ```text
 # Vertex default
 RESEARCH_AGENT_MODEL_PROVIDER=vertex
-RESEARCH_AGENT_MODEL=gemini-3.1-pro-preview
+RESEARCH_AGENT_MODEL=shared-default-model
+RESEARCH_AGENT_MODEL_VERTEX=gemini-2.0-flash-lite
 
 # OpenAI
 RESEARCH_AGENT_MODEL_PROVIDER=openai
-RESEARCH_AGENT_MODEL=gpt-4.1
+RESEARCH_AGENT_MODEL=shared-default-model
+RESEARCH_AGENT_MODEL_OPENAI=gpt-4.1
 OPENAI_API_KEY=your-openai-key
 
 # OpenAI Codex OAuth
 RESEARCH_AGENT_MODEL_PROVIDER=openai-codex
-RESEARCH_AGENT_MODEL=gpt-5.4-codex
+RESEARCH_AGENT_MODEL=shared-default-model
+RESEARCH_AGENT_MODEL_OPENAI_CODEX=gpt-5.2
 OPENAI_CODEX_ACCESS_TOKEN=your-codex-access-token
 OPENAI_CODEX_ACCOUNT_ID=your-chatgpt-account-id
 
 # Anthropic
 RESEARCH_AGENT_MODEL_PROVIDER=anthropic
-RESEARCH_AGENT_MODEL=claude-3-7-sonnet-latest
+RESEARCH_AGENT_MODEL=shared-default-model
+RESEARCH_AGENT_MODEL_ANTHROPIC=claude-3-7-sonnet-latest
 ANTHROPIC_API_KEY=your-anthropic-key
 ```
 
 The runtime selects the chat model from `RESEARCH_AGENT_MODEL_PROVIDER`.
+
+If `RESEARCH_AGENT_MODEL_<PROVIDER>` is set for the active provider, it overrides
+the shared `RESEARCH_AGENT_MODEL`. This is the recommended setup when you switch
+between providers that require different model families, such as Vertex and
+OpenAI Codex.
 
 - `openai` uses the standard OpenAI API at `https://api.openai.com/v1` and requires `OPENAI_API_KEY`.
 - `openai-codex` uses the ChatGPT Codex backend at `https://chatgpt.com/backend-api/codex` and requires `OPENAI_CODEX_ACCESS_TOKEN`.
