@@ -1,0 +1,13 @@
+rules:
+  - id: architecture.no-domain-to-infra-imports
+    message: Core domain modules must not import service, storage, temporal, or tool layers.
+    severity: ERROR
+    languages:
+      - typescript
+      - javascript
+    paths:
+      include:
+        - src/core/**/*.ts
+      exclude:
+        - src/core/research-runner.ts
+    pattern-regex: from\s+["'](?:\.\./)+(?:service|storage|temporal|tools)/

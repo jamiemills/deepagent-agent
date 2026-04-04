@@ -18,10 +18,10 @@
     "test:watch": "bun x --bun vitest",
     "lint": "bunx biome check .",
     "lint:complexity": "bunx eslint --config eslint.complexity.config.mjs \"src/**/*.ts\" \"test/**/*.ts\" \"vitest.config.ts\"",
-    "lint:semgrep": "semgrep scan --quiet --config semgrep/rules src test",
+    "lint:semgrep": "semgrep scan --quiet --config semgrep/rules src test biome.json eslint.complexity.config.mjs package.json tsconfig.json .githooks",
     "test:semgrep": "semgrep test semgrep/rules",
     "format": "bunx biome check --write .",
-    "typecheck": "bunx tsc -p tsconfig.json --noEmit",
+    "typecheck": "bunx tsc -p tsconfig.json",
     "prepare": "bun scripts/install-hooks.mjs"
   },
   "dependencies": {

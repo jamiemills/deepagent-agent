@@ -1,0 +1,20 @@
+rules:
+  - id: hygiene.no-suppression-comments-slash
+    message: Do not add suppression comments; fix the underlying issue instead.
+    severity: ERROR
+    languages:
+      - typescript
+      - javascript
+    pattern-regex: (?m)^\s*(?://|/\*+)\s*(?:eslint-disable(?:-next-line|-line)?\b|@ts-ignore\b|@ts-expect-error\b|biome-ignore\b|nosemgrep\b|semgrep:\s*ignore\b)
+  - id: hygiene.no-suppression-comments-hash
+    message: Do not add suppression comments; fix the underlying issue instead.
+    severity: ERROR
+    languages:
+      - generic
+    paths:
+      include:
+        - ".githooks/**"
+        - "**/*.sh"
+        - "**/*.yaml"
+        - "**/*.yml"
+    pattern-regex: (?m)^\s*#\s*(?:nosemgrep\b|semgrep:\s*ignore\b|biome-ignore\b)

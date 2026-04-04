@@ -1,0 +1,28 @@
+rules:
+  - id: config.no-weakened-biome-any
+    message: Keep noExplicitAny enforced in Biome.
+    severity: ERROR
+    languages:
+      - generic
+    pattern-regex: '"noExplicitAny"\s*:\s*"off"'
+  - id: config.no-weakened-biome-non-null
+    message: Keep noNonNullAssertion enforced in Biome.
+    severity: ERROR
+    languages:
+      - generic
+    pattern-regex: '"noNonNullAssertion"\s*:\s*"off"'
+  - id: config.no-weakened-check-script
+    message: Quality gate scripts must run real checks, not no-op commands.
+    severity: ERROR
+    languages:
+      - generic
+    pattern-regex: '"(?:lint(?::[^"]+)?|test|typecheck)"\s*:\s*"(?:\s*(?:echo|printf)\b[^"]*|\s*(?:true|:)\s*)'
+  - id: config.no-hook-bypass
+    message: Pre-commit quality gates must not be bypassed.
+    severity: ERROR
+    languages:
+      - generic
+    paths:
+      include:
+        - .githooks/pre-commit
+    pattern-regex: \|\|\s*(?:true|:)
