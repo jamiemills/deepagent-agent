@@ -4,6 +4,7 @@ import type {
 } from "@langchain/core/language_models/base";
 
 import { resolveOpenAICodexSession } from "./openai-codex-auth.js";
+import { ChatOpenAICodex } from "./openai-codex-chat-model.js";
 
 export type ResearchModelProvider =
   | "vertex"
@@ -61,6 +62,7 @@ async function buildOpenAICodexModelOptions(
     apiKey: session.accessToken,
     maxRetries: 2,
     useResponsesApi: true,
+    streaming: true,
     configuration: {
       baseURL: OPENAI_CODEX_BASE_URL,
       defaultHeaders: session.accountId
@@ -98,6 +100,10 @@ async function loadOpenAIFactory() {
   }
 }
 
+async function loadOpenAICodexFactory() {
+  return (options: ModelOptions) => new ChatOpenAICodex(options as never);
+}
+
 async function loadAnthropicFactory() {
   try {
     const { ChatAnthropic } = await import("@langchain/anthropic");
@@ -124,9 +130,7 @@ export async function createResearchModel(
 
     case "openai-codex": {
       const createOpenAICodexModel =
-        deps.createOpenAICodexModel ??
-        deps.createOpenAIModel ??
-        (await loadOpenAIFactory());
+        deps.createOpenAICodexModel ?? (await loadOpenAICodexFactory());
       return createOpenAICodexModel(await buildOpenAICodexModelOptions(config));
     }
 

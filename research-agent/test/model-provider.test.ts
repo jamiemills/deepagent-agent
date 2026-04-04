@@ -70,6 +70,7 @@ test("createResearchModel builds an OpenAI Codex model with the Codex endpoint a
           "ChatGPT-Account-Id": "acct-codex",
         },
       },
+      streaming: true,
     },
   ]);
   assert.deepEqual(model, { provider: "openai-codex" });
