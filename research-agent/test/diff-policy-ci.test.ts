@@ -124,15 +124,17 @@ test("keeps valid committed exceptions active when the manifest is unchanged", (
     ],
   });
 
-  const result = evaluateDiffPolicies({
-    stagedEntries: [{ status: "M", path: "README.md" }],
-    diffStats: [{ path: "README.md", added: 200, deleted: 10 }],
-    manifestRaw,
-    today: new Date("2026-04-05"),
-  });
+  withGitShow(makeValidGitShowMap(), () => {
+    const result = evaluateDiffPolicies({
+      stagedEntries: [{ status: "M", path: "README.md" }],
+      diffStats: [{ path: "README.md", added: 200, deleted: 10 }],
+      manifestRaw,
+      today: new Date("2026-04-05"),
+    });
 
-  expect(result.violations).toEqual([]);
-  expect(result.manifestIssues).toEqual([]);
+    expect(result.violations).toEqual([]);
+    expect(result.manifestIssues).toEqual([]);
+  });
 });
 
 test("does not honor expired committed exceptions when the manifest is unchanged", () => {
@@ -149,17 +151,19 @@ test("does not honor expired committed exceptions when the manifest is unchanged
     ],
   });
 
-  const result = evaluateDiffPolicies({
-    stagedEntries: [{ status: "M", path: "README.md" }],
-    diffStats: [{ path: "README.md", added: 200, deleted: 10 }],
-    manifestRaw,
-    today: new Date("2026-04-05"),
-  });
+  withGitShow(makeValidGitShowMap(), () => {
+    const result = evaluateDiffPolicies({
+      stagedEntries: [{ status: "M", path: "README.md" }],
+      diffStats: [{ path: "README.md", added: 200, deleted: 10 }],
+      manifestRaw,
+      today: new Date("2026-04-05"),
+    });
 
-  expect(result.violations.map((violation) => violation.policy)).toContain(
-    "large-diff",
-  );
-  expect(result.manifestIssues).toContain(
-    'Exception "expired-large-diff" expired on 2026-01-01.',
-  );
+    expect(result.violations.map((violation) => violation.policy)).toContain(
+      "large-diff",
+    );
+    expect(result.manifestIssues).toContain(
+      'Exception "expired-large-diff" expired on 2026-01-01.',
+    );
+  });
 });

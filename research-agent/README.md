@@ -390,14 +390,17 @@ Use:
 
 Do not regenerate `package-lock.json`; `bun.lock` is the only lockfile.
 
-The pre-commit hook runs:
+Git hooks are managed by Lefthook.
 
-- `bunx biome check .`
-- `bun run lint:complexity`
-- `bun run typecheck`
-- `bun run test`
+The fast local lane runs on `pre-commit`:
 
-When `bun install` runs inside a Git repo, `prepare` configures `core.hooksPath` to `.githooks`.
+- `bun run check:fast`
+
+The slow lane runs on `pre-push`:
+
+- `bun run agent-policy`
+
+When `bun install` runs inside a Git repo, `prepare` installs Git hooks from the repo-root `lefthook.yml` and routes them into `research-agent`.
 
 ## Testing
 

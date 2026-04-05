@@ -13,7 +13,7 @@ rules:
       - generic
     paths:
       include:
-        - ".githooks/**"
+        - "lefthook.yml"
         - "**/*.sh"
         - "**/*.yaml"
         - "**/*.yml"

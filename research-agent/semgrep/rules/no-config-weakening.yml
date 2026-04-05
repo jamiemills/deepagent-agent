@@ -18,11 +18,11 @@ rules:
       - generic
     pattern-regex: '"(?:lint(?::[^"]+)?|test|typecheck)"\s*:\s*"(?:\s*(?:echo|printf)\b[^"]*|\s*(?:true|:)\s*)'
   - id: config.no-hook-bypass
-    message: Pre-commit quality gates must not be bypassed.
+    message: Lefthook quality gates must not be bypassed.
     severity: ERROR
     languages:
       - generic
     paths:
       include:
-        - .githooks/pre-commit
+        - lefthook.yml
     pattern-regex: \|\|\s*(?:true|:)

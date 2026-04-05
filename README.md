@@ -199,8 +199,8 @@ bun run typecheck
 
 Hook and CI behavior:
 
-- `pre-commit` runs the fast local gate
-- `pre-push` runs the full `agent-policy` gate
+- Lefthook `pre-commit` runs the fast local gate
+- Lefthook `pre-push` runs the full `agent-policy` gate
 - GitHub Actions runs the `agent-policy` workflow
 
 ## Policy Enforcement

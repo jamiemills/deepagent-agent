@@ -26,6 +26,7 @@ function getMissingScriptIssues(scripts: Record<string, string>): string[] {
     "lint:complexity",
     "lint:typed",
     "lint:semgrep",
+    "prepare",
     "typecheck",
     "test",
     "verify",
@@ -69,7 +70,7 @@ function getLintSemgrepIssues(lintSemgrep: string | undefined): string[] {
     return [];
   }
 
-  return ["semgrep scan", "semgrep/rules", "biome.json", ".githooks"]
+  return ["semgrep scan", "semgrep/rules", "biome.json", "../lefthook.yml"]
     .filter((snippet) => !lintSemgrep.includes(snippet))
     .map((snippet) => `lint:semgrep must include "${snippet}".`);
 }
@@ -90,6 +91,7 @@ function getPackageWeakeningIssues(
     ...getAgentPolicyScriptIssues(scripts["agent-policy"]),
     ...getFastLaneIssues(scripts["check:fast"]),
     ...getTypedLintIssues(scripts["lint:typed"]),
+    ...getPrepareScriptIssues(scripts["prepare"]),
     ...getVerifyScriptIssues(scripts["verify"]),
     ...getLintSemgrepIssues(scripts["lint:semgrep"]),
   ];
@@ -127,6 +129,16 @@ function getTypedLintIssues(lintTyped: string | undefined): string[] {
   return ["eslint.typed.config.mjs", '"src/**/*.ts"', '"test/**/*.ts"']
     .filter((snippet) => !lintTyped.includes(snippet))
     .map((snippet) => `lint:typed must include "${snippet}".`);
+}
+
+function getPrepareScriptIssues(prepare: string | undefined): string[] {
+  if (typeof prepare !== "string") {
+    return [];
+  }
+
+  return ["bun scripts/install-hooks.mjs"]
+    .filter((snippet) => !prepare.includes(snippet))
+    .map((snippet) => `prepare must include "${snippet}".`);
 }
 
 function getBiomeWeakeningIssues(
@@ -251,6 +263,7 @@ function getDiffPolicyWeakeningIssues(
     "export const MAX_CHANGED_LINES = 150;",
     "export const MAX_CHANGED_FILES = 5;",
     '"scripts/check-diff-policies.mjs"',
+    '"scripts/install-hooks.mjs"',
     '"scripts/run-agent-policy.mjs"',
     '"scripts/run-step-sequence.mjs"',
     '"scripts/run-verify.mjs"',
@@ -268,6 +281,24 @@ function getDiffPolicyWeakeningIssues(
   }
 
   return issues;
+}
+
+function getHookInstallWeakeningIssues(
+  readCurrentFile: (path: string) => string | null,
+): string[] {
+  const installHooks = readCurrentFile("scripts/install-hooks.mjs");
+  if (!installHooks) {
+    return ["scripts/install-hooks.mjs is missing from the staged tree."];
+  }
+
+  return [
+    '"config", "--unset", "core.hooksPath"',
+    '"node_modules"',
+    "lefthookBinary",
+    '["install"]',
+  ]
+    .filter((snippet) => !installHooks.includes(snippet))
+    .map((snippet) => `scripts/install-hooks.mjs must include ${snippet}.`);
 }
 
 function getTsconfigWeakeningIssues(
@@ -288,14 +319,14 @@ function getTsconfigWeakeningIssues(
 function getPrePushWeakeningIssues(
   readCurrentFile: (path: string) => string | null,
 ): string[] {
-  const prePush = readCurrentFile(".githooks/pre-push");
-  if (!prePush) {
-    return [".githooks/pre-push is missing from the staged tree."];
+  const lefthook = readCurrentFile("lefthook.yml");
+  if (!lefthook) {
+    return ["lefthook.yml is missing from the staged tree."];
   }
 
-  return ["bun run agent-policy"]
-    .filter((snippet) => !prePush.includes(snippet))
-    .map((snippet) => `pre-push hook must include "${snippet}".`);
+  return ["pre-push:", "root: research-agent", "run: bun run agent-policy"]
+    .filter((snippet) => !lefthook.includes(snippet))
+    .map((snippet) => `lefthook.yml must include "${snippet}".`);
 }
 
 function getWorkflowWeakeningIssues(
@@ -337,14 +368,14 @@ function getWorkflowWeakeningIssues(
 function getPreCommitWeakeningIssues(
   readCurrentFile: (path: string) => string | null,
 ): string[] {
-  const preCommit = readCurrentFile(".githooks/pre-commit");
-  if (!preCommit) {
-    return [".githooks/pre-commit is missing from the staged tree."];
+  const lefthook = readCurrentFile("lefthook.yml");
+  if (!lefthook) {
+    return ["lefthook.yml is missing from the staged tree."];
   }
 
-  return ["bun run check:fast"]
-    .filter((snippet) => !preCommit.includes(snippet))
-    .map((snippet) => `pre-commit hook must include "${snippet}".`);
+  return ["pre-commit:", "root: research-agent", "run: bun run check:fast"]
+    .filter((snippet) => !lefthook.includes(snippet))
+    .map((snippet) => `lefthook.yml must include "${snippet}".`);
 }
 
 export function collectConfigWeakeningIssues(args: {
@@ -364,6 +395,7 @@ export function collectConfigWeakeningIssues(args: {
     ...getEslintWeakeningIssues(args.readCurrentFile),
     ...getTypedEslintWeakeningIssues(args.readCurrentFile),
     ...getDiffPolicyWeakeningIssues(args.readCurrentFile),
+    ...getHookInstallWeakeningIssues(args.readCurrentFile),
     ...getTsconfigWeakeningIssues(args.readCurrentFile),
     ...getPreCommitWeakeningIssues(args.readCurrentFile),
     ...getPrePushWeakeningIssues(args.readCurrentFile),

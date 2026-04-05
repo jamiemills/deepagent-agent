@@ -8,7 +8,8 @@ export const validPackageJson = JSON.stringify({
     "lint:typed":
       'bunx eslint --config eslint.typed.config.mjs "src/**/*.ts" "test/**/*.ts"',
     "lint:semgrep":
-      "semgrep scan --quiet --config semgrep/rules src test biome.json eslint.complexity.config.mjs package.json tsconfig.json .githooks",
+      "semgrep scan --quiet --config semgrep/rules src test ../lefthook.yml biome.json eslint.complexity.config.mjs eslint.typed.config.mjs package.json tsconfig.json scripts",
+    prepare: "bun scripts/install-hooks.mjs",
     typecheck: "bunx tsc -p tsconfig.json",
     test: "bun x --bun vitest run",
     verify: "bun scripts/run-verify.mjs",
@@ -45,14 +46,20 @@ projectService: true
 "@typescript-eslint/no-non-null-assertion": "off"
 `;
 
-export const validPreCommit = `
-printf 'Running fast local gate...\\n'
-bun run check:fast
-`;
-
-export const validPrePush = `
-printf 'Running full agent policy gate...\\n'
-bun run agent-policy
+export const validLefthook = `
+lefthook: |
+  cd research-agent
+  bunx lefthook
+pre-commit:
+  commands:
+    fast:
+      root: research-agent
+      run: bun run check:fast
+pre-push:
+  commands:
+    full:
+      root: research-agent
+      run: bun run agent-policy
 `;
 
 export const validWorkflow = `
@@ -65,6 +72,12 @@ bun run agent-policy
 DIFF_POLICY_MODE: range
 DIFF_POLICY_BASE_REF:
 DIFF_POLICY_HEAD_REF:
+`;
+
+export const validInstallHooks = `
+execFileSync("git", ["config", "--unset", "core.hooksPath"], {})
+path.join(projectRoot, "node_modules", ".bin", "lefthook")
+execFileSync(lefthookBinary, ["install"], {})
 `;
 
 export const validTsconfig = JSON.stringify({
@@ -81,8 +94,9 @@ export const MAX_CHANGED_FILES = 5;
 export const PROTECTED_PATHS = [
   ".github/workflows/agent-policy.yml",
   "eslint.typed.config.mjs",
-  ".githooks/pre-push",
+  "lefthook.yml",
   "scripts/check-diff-policies.mjs",
+  "scripts/install-hooks.mjs",
   "scripts/run-agent-policy.mjs",
   "scripts/run-step-sequence.mjs",
   "scripts/run-verify.mjs",
@@ -179,17 +193,17 @@ export function withGitDiffOutputs(args: {
 export function makeValidGitShowMap(overrides?: Record<string, string | null>) {
   return {
     ".github/workflows/agent-policy.yml": validWorkflow,
+    "lefthook.yml": validLefthook,
     "package.json": validPackageJson,
     "biome.json": validBiomeJson,
     "tsconfig.json": validTsconfig,
     "eslint.typed.config.mjs": validTypedEslintConfig,
     "eslint.complexity.config.mjs": validEslintConfig,
     "src/diff-policy-shared.ts": validDiffPolicyShared,
+    "scripts/install-hooks.mjs": validInstallHooks,
     "scripts/run-agent-policy.mjs": "runStepSequence({ steps: [] });",
     "scripts/run-step-sequence.mjs": "export function runStepSequence() {}",
     "scripts/run-verify.mjs": "runStepSequence({ steps: [] });",
-    ".githooks/pre-commit": validPreCommit,
-    ".githooks/pre-push": validPrePush,
     "semgrep/rules/no-as-any.yml": "rules: []",
     "semgrep/rules/no-config-weakening.yml": "rules: []",
     "semgrep/rules/no-domain-to-infra-imports.yml": "rules: []",
@@ -215,13 +229,13 @@ export function makeRepoRootGitShowMap() {
       validMap["eslint.complexity.config.mjs"],
     "research-agent/src/diff-policy-shared.ts":
       validMap["src/diff-policy-shared.ts"],
+    "research-agent/scripts/install-hooks.mjs":
+      validMap["scripts/install-hooks.mjs"],
     "research-agent/scripts/run-agent-policy.mjs":
       validMap["scripts/run-agent-policy.mjs"],
     "research-agent/scripts/run-step-sequence.mjs":
       validMap["scripts/run-step-sequence.mjs"],
     "research-agent/scripts/run-verify.mjs": validMap["scripts/run-verify.mjs"],
-    "research-agent/.githooks/pre-commit": validMap[".githooks/pre-commit"],
-    "research-agent/.githooks/pre-push": validMap[".githooks/pre-push"],
     "research-agent/semgrep/rules/no-as-any.yml":
       validMap["semgrep/rules/no-as-any.yml"],
     "research-agent/semgrep/rules/no-config-weakening.yml":
@@ -240,5 +254,6 @@ export function makeRepoRootGitShowMap() {
       validMap["semgrep/rules/no-tools-to-adapter-imports.yml"],
     "research-agent/semgrep/rules/require-boundary-validation.yml":
       validMap["semgrep/rules/require-boundary-validation.yml"],
+    "lefthook.yml": validLefthook,
   });
 }
