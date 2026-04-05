@@ -813,7 +813,9 @@ Declares the ordered top-level `agent-policy` steps and hands them to the generi
 
 ### 20. Local Hooks
 
-#### 20.1 `research-agent/.githooks/pre-commit`
+The repository uses Lefthook at the repo root, with hook names `pre-commit` and `pre-push`.
+
+#### 20.1 Lefthook `pre-commit`
 
 Runs:
 
@@ -828,7 +830,7 @@ Function:
 3. staged diff policy check
 4. complexity budget check
 
-#### 20.2 `research-agent/.githooks/pre-push`
+#### 20.2 Lefthook `pre-push`
 
 Runs:
 
@@ -919,7 +921,7 @@ Semgrep scans:
 4. `eslint.complexity.config.mjs`
 5. `package.json`
 6. `tsconfig.json`
-7. `.githooks`
+7. repo-root `lefthook.yml`
 
 Meaning:
 
