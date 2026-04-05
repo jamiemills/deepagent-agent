@@ -1,33 +1,4 @@
 {
   "version": 1,
-  "exceptions": [
-    {
-      "id": "lefthook-migration-large-diff",
-      "policy": "large-diff",
-      "paths": ["**"],
-      "reason": "Temporary bootstrap for the Lefthook migration.",
-      "expiresOn": "2026-05-01"
-    },
-    {
-      "id": "lefthook-migration-enforcement-change",
-      "policy": "enforcement-change",
-      "paths": ["**"],
-      "reason": "Temporary bootstrap for the Lefthook migration.",
-      "expiresOn": "2026-05-01"
-    },
-    {
-      "id": "lefthook-migration-config-weakening",
-      "policy": "config-weakening",
-      "paths": ["**"],
-      "reason": "Temporary bootstrap for the Lefthook migration.",
-      "expiresOn": "2026-05-01"
-    },
-    {
-      "id": "lefthook-migration-complexity-regression",
-      "policy": "complexity-regression",
-      "paths": ["**"],
-      "reason": "Temporary bootstrap for the Lefthook migration.",
-      "expiresOn": "2026-05-01"
-    }
-  ]
+  "exceptions": []
 }
