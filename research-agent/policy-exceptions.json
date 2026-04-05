@@ -1,12 +1,4 @@
 {
   "version": 1,
-  "exceptions": [
-    {
-      "id": "readme-large-diff-2026-04-05",
-      "policy": "large-diff",
-      "paths": ["README.md", "policy-exceptions.json"],
-      "reason": "Comprehensive repo-level README rewrite exceeds the default diff budget.",
-      "expiresOn": "2026-04-12"
-    }
-  ]
+  "exceptions": []
 }
