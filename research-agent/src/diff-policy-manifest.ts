@@ -1,6 +1,7 @@
 import {
   KNOWN_POLICIES,
   POLICY_EXCEPTION_MANIFEST,
+  type PolicyException,
   type PolicyManifest,
   type PolicyViolation,
   matchPolicyPath,
@@ -79,14 +80,41 @@ function getExpiryIssues(args: {
   expiresOn: string;
   today: Date;
 }): string[] {
-  const expiry = new Date(args.expiresOn);
-  if (typeof args.expiresOn !== "string" || Number.isNaN(expiry.valueOf())) {
+  const expiry = parseExpiryDate(args.expiresOn);
+  if (!expiry) {
     return [`Exception "${args.id}" must include a valid expiresOn date.`];
   }
 
   return expiry < args.today
     ? [`Exception "${args.id}" expired on ${args.expiresOn}.`]
     : [];
+}
+
+function parseExpiryDate(expiresOn: string): Date | null {
+  if (typeof expiresOn !== "string") {
+    return null;
+  }
+
+  const expiry = new Date(expiresOn);
+  return Number.isNaN(expiry.valueOf()) ? null : expiry;
+}
+
+function getExceptionStateIssues(args: {
+  entry: PolicyException;
+  today: Date;
+}): string[] {
+  return getExpiryIssues({
+    id: args.entry.id,
+    expiresOn: args.entry.expiresOn,
+    today: args.today,
+  });
+}
+
+function isActiveException(args: {
+  entry: PolicyException;
+  today: Date;
+}): boolean {
+  return getExceptionStateIssues(args).length === 0;
 }
 
 function getPathMatchIssues(args: {
@@ -139,9 +167,26 @@ function validateManifestEntry(args: {
 function findMatchingEntries(args: {
   manifest: PolicyManifest;
   violation: PolicyViolation;
+  today: Date;
 }) {
   return args.manifest.exceptions.filter(
     (entry) =>
+      isActiveException({ entry, today: args.today }) &&
+      entry.policy === args.violation.policy &&
+      entry.paths.some((pattern) =>
+        args.violation.paths.some((path) => matchPolicyPath(pattern, path)),
+      ),
+  );
+}
+
+function findInactiveMatchingEntries(args: {
+  manifest: PolicyManifest;
+  violation: PolicyViolation;
+  today: Date;
+}) {
+  return args.manifest.exceptions.filter(
+    (entry) =>
+      !isActiveException({ entry, today: args.today }) &&
       entry.policy === args.violation.policy &&
       entry.paths.some((pattern) =>
         args.violation.paths.some((path) => matchPolicyPath(pattern, path)),
@@ -165,11 +210,13 @@ function findUncoveredViolationPaths(args: {
 export function getUncoveredViolations(args: {
   manifest: PolicyManifest;
   violations: PolicyViolation[];
+  today: Date;
 }): PolicyViolation[] {
   return args.violations.flatMap((violation) => {
     const matchingEntries = findMatchingEntries({
       manifest: args.manifest,
       violation,
+      today: args.today,
     });
     const uncoveredPaths = findUncoveredViolationPaths({
       violation,
@@ -198,6 +245,51 @@ function getManifestEntryIssues(args: {
   );
 }
 
+function getViolationIssues(args: {
+  manifest: PolicyManifest;
+  violation: PolicyViolation;
+  today: Date;
+  reportedIssues: Set<string>;
+}) {
+  const issues: string[] = [];
+  const matchingEntries = findMatchingEntries({
+    manifest: args.manifest,
+    violation: args.violation,
+    today: args.today,
+  });
+  const inactiveEntries = findInactiveMatchingEntries({
+    manifest: args.manifest,
+    violation: args.violation,
+    today: args.today,
+  });
+
+  const uncoveredPaths = findUncoveredViolationPaths({
+    violation: args.violation,
+    matchingEntries,
+  });
+  if (uncoveredPaths.length === 0) {
+    return issues;
+  }
+
+  for (const entry of inactiveEntries) {
+    for (const issue of getExceptionStateIssues({ entry, today: args.today })) {
+      if (args.reportedIssues.has(issue)) {
+        continue;
+      }
+      args.reportedIssues.add(issue);
+      issues.push(issue);
+    }
+  }
+
+  issues.push(
+    `Policy "${args.violation.policy}" requires an exception for: ${uncoveredPaths.join(
+      ", ",
+    )}.`,
+  );
+
+  return issues;
+}
+
 export function validatePolicyManifest(args: {
   manifest: PolicyManifest;
   stagedFiles: string[];
@@ -208,6 +300,7 @@ export function validatePolicyManifest(args: {
   const seenIds = new Set<string>();
   const today = args.today ?? new Date();
   const manifestTouched = args.stagedFiles.includes(POLICY_EXCEPTION_MANIFEST);
+  const reportedIssues = new Set<string>();
 
   if (manifestTouched) {
     issues.push(
@@ -221,22 +314,14 @@ export function validatePolicyManifest(args: {
   }
 
   for (const violation of args.violations) {
-    const matchingEntries = findMatchingEntries({
-      manifest: args.manifest,
-      violation,
-    });
-
-    const uncoveredPaths = findUncoveredViolationPaths({
-      violation,
-      matchingEntries,
-    });
-    if (uncoveredPaths.length > 0) {
-      issues.push(
-        `Policy "${violation.policy}" requires an exception for: ${uncoveredPaths.join(
-          ", ",
-        )}.`,
-      );
-    }
+    issues.push(
+      ...getViolationIssues({
+        manifest: args.manifest,
+        violation,
+        today,
+        reportedIssues,
+      }),
+    );
   }
 
   return issues;

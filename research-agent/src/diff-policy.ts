@@ -197,6 +197,7 @@ export function evaluateDiffPolicies(args: {
   today?: Date;
 }) {
   const stagedFiles = args.stagedEntries.map((entry) => entry.path);
+  const today = args.today ?? new Date();
   const rawViolations = collectPolicyViolations({
     stagedEntries: args.stagedEntries,
     diffStats: args.diffStats,
@@ -207,12 +208,13 @@ export function evaluateDiffPolicies(args: {
   const violations = getUncoveredViolations({
     manifest,
     violations: rawViolations,
+    today,
   });
   const manifestIssues = validatePolicyManifest({
     manifest,
     stagedFiles,
     violations: rawViolations,
-    today: args.today,
+    today,
   });
 
   return { violations, manifestIssues };
