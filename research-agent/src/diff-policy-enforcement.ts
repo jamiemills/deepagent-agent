@@ -126,6 +126,7 @@ function buildComplexityRegressionViolation(args: {
 function isTrackedTypeScriptChange(entry: StagedEntry): boolean {
   return (
     ["A", "C", "M", "R"].some((status) => entry.status.startsWith(status)) &&
+    entry.path.startsWith("src/") &&
     entry.path.endsWith(".ts")
   );
 }

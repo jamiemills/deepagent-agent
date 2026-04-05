@@ -180,7 +180,8 @@ test("normalizes repo-root staged paths for research-agent files", () => {
       "research-agent/.githooks/pre-push": validPrePush,
       "research-agent/semgrep/rules/no-as-any.yml": "rules: []",
       "research-agent/semgrep/rules/no-config-weakening.yml": "rules: []",
-      "research-agent/semgrep/rules/no-domain-to-infra-imports.yml": "rules: []",
+      "research-agent/semgrep/rules/no-domain-to-infra-imports.yml":
+        "rules: []",
       "research-agent/semgrep/rules/no-monkeypatching.yml": "rules: []",
       "research-agent/semgrep/rules/no-storage-to-adapter-imports.yml":
         "rules: []",
