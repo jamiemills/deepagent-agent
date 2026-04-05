@@ -1,0 +1,54 @@
+rules:
+  - id: boundary.require-service-body-validation
+    message: Validate incoming request bodies at service boundaries with a schema.
+    severity: ERROR
+    languages:
+      - typescript
+      - javascript
+    paths:
+      include:
+        - src/service/**/*.ts
+    patterns:
+      - pattern: request.body
+      - pattern-not-inside: $SCHEMA.parse(request.body)
+      - pattern-not-inside: $SCHEMA.safeParse(request.body)
+  - id: boundary.require-api-response-validation
+    message: Validate JSON responses from remote APIs with a schema before use.
+    severity: ERROR
+    languages:
+      - typescript
+      - javascript
+    paths:
+      include:
+        - src/api-client.ts
+    patterns:
+      - pattern: await $RESPONSE.json()
+      - pattern-not-inside: $SCHEMA.parse(await $RESPONSE.json())
+      - pattern-not-inside: $SCHEMA.safeParse(await $RESPONSE.json())
+  - id: boundary.require-temporal-input-validation
+    message: Validate Temporal activity and workflow inputs with a schema.
+    severity: ERROR
+    languages:
+      - typescript
+      - javascript
+    paths:
+      include:
+        - src/temporal/**/*.ts
+    patterns:
+      - pattern-either:
+          - pattern: input.runId
+          - pattern: input.request
+      - pattern-not-inside: $SCHEMA.parse(input)
+      - pattern-not-inside: $SCHEMA.safeParse(input)
+  - id: boundary.require-storage-json-validation
+    message: Validate JSON loaded from storage boundaries before use.
+    severity: ERROR
+    languages:
+      - typescript
+      - javascript
+    paths:
+      include:
+        - src/storage/**/*.ts
+    patterns:
+      - pattern: JSON.parse($RAW)
+      - pattern-not-inside: $SCHEMA.parse(JSON.parse($RAW))

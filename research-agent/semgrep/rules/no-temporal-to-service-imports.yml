@@ -1,0 +1,11 @@
+rules:
+  - id: architecture.no-temporal-to-service-imports
+    message: Temporal modules must not import service layers directly.
+    severity: ERROR
+    languages:
+      - typescript
+      - javascript
+    paths:
+      include:
+        - src/temporal/**/*.ts
+    pattern-regex: from\s+["'](?:\.\./)+service/

@@ -1,0 +1,28 @@
+rules:
+  - id: runtime.no-monkeypatching
+    message: Avoid monkeypatching globals, built-ins, and prototypes.
+    severity: ERROR
+    languages:
+      - typescript
+      - javascript
+    pattern-either:
+      - pattern: $OBJECT.prototype.$PROPERTY = $VALUE
+      - pattern: Object.defineProperty($OBJECT.prototype, $PROPERTY, $DESCRIPTOR)
+      - pattern: Reflect.defineProperty($OBJECT.prototype, $PROPERTY, $DESCRIPTOR)
+      - pattern: globalThis.$PROPERTY = $VALUE
+      - pattern: global.$PROPERTY = $VALUE
+      - pattern: window.$PROPERTY = $VALUE
+      - pattern: globalThis[$PROPERTY] = $VALUE
+      - pattern: global[$PROPERTY] = $VALUE
+      - pattern: window[$PROPERTY] = $VALUE
+  - id: runtime.no-monkeypatching-builtins
+    message: Avoid monkeypatching built-in runtime objects.
+    severity: ERROR
+    languages:
+      - typescript
+      - javascript
+    patterns:
+      - pattern: $BUILTIN.$PROPERTY = $VALUE
+      - metavariable-regex:
+          metavariable: $BUILTIN
+          regex: ^(Array|Boolean|Date|Error|Function|JSON|Map|Math|Number|Object|Promise|Reflect|RegExp|Set|String|Symbol|WeakMap|WeakSet)$

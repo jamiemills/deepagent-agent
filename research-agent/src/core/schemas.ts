@@ -1,4 +1,4 @@
-import { z } from "zod";
+import z from "zod/v3";
 
 export const executionModeSchema = z.enum(["local", "hosted"]);
 export const runStatusSchema = z.enum([
@@ -41,6 +41,11 @@ export const researchJobRequestSchema = z.object({
 export const reviewRequestSchema = z.object({
   decision: z.enum(["approved", "rejected", "pending"]),
   notes: z.string().optional(),
+});
+
+export const hostedResearchJobInputSchema = z.object({
+  runId: z.string(),
+  request: researchJobRequestSchema,
 });
 
 export const claimLedgerRecordSchema = z.object({

@@ -87,90 +87,93 @@ function buildResponseHeaders(
   return responseHeaders;
 }
 
-test("hosted API completes a background research job end to end and serves final artifacts over HTTP", async () => {
-  await withTempDir(async (dir) => {
-    const metadataStore = new FileMetadataStore(path.join(dir, "metadata"));
-    const artifactStore = new FileArtifactStore(path.join(dir, "artifacts"));
-    const { temporalClient } = createInlineTemporalClient({
-      dataDir: dir,
-      metadataStore,
-      artifactStore,
+async function installAppFetch(app: Awaited<ReturnType<typeof buildServer>>) {
+  const originalFetch = globalThis.fetch;
+
+  globalThis.fetch = async (input, init = {}) => {
+    const url = new URL(resolveFetchUrl(input));
+    const body = await readRequestBody(init);
+    const requestHeaders = buildRequestHeaders(init);
+    const injectOptions = buildInjectOptions({
+      init,
+      url,
+      body,
+      headers: requestHeaders,
     });
-
-    const app = await buildServer({
-      metadataStore,
-      artifactStore,
-      temporalClient,
-      taskQueue: "research-agent-test",
-      workflow: Symbol("workflow"),
-    });
-    const originalFetch = globalThis.fetch;
-
-    globalThis.fetch = async (input, init = {}) => {
-      const url = new URL(resolveFetchUrl(input));
-      const body = await readRequestBody(init);
-      const requestHeaders = buildRequestHeaders(init);
-      const injectOptions = buildInjectOptions({
-        init,
-        url,
-        body,
-        headers: requestHeaders,
-      });
-
-      const response = (await app.inject(injectOptions as never)) as {
-        body: string;
-        statusCode: number;
-        headers: Record<string, string | string[] | undefined>;
-      };
-
-      return new Response(response.body, {
-        status: response.statusCode,
-        headers: buildResponseHeaders(response.headers),
-      });
+    const response = (await app.inject(injectOptions as never)) as {
+      body: string;
+      statusCode: number;
+      headers: Record<string, string | string[] | undefined>;
     };
 
-    try {
-      const client = new ResearchApiClient("http://research-agent.test");
+    return new Response(response.body, {
+      status: response.statusCode,
+      headers: buildResponseHeaders(response.headers),
+    });
+  };
 
-      const created = await client.createJob({
-        prompt:
-          "What is the latest Deep Agents JavaScript architecture update?",
-        requestedBy: "integration-test",
-      });
+  return originalFetch;
+}
 
-      assert.equal(created.status, "queued");
-      assert.equal(created.executionMode, "hosted");
+async function assertHostedArtifacts(client: ResearchApiClient, runId: string) {
+  const report = await client.getArtifact(runId, "report.md");
+  assert.match(report, /Hosted Report/);
+  assert.match(report, /Freshness verdict: `passed`/);
 
-      const completed = await waitForRun(
-        () => client.getJob(created.id),
-        (record) => record.status === "completed",
-      );
+  const provenance = await client.getArtifact(runId, "provenance.json");
+  const parsedProvenance = JSON.parse(provenance) as {
+    sources: Array<{ url: string }>;
+  };
+  assert.equal(parsedProvenance.sources.length, 2);
+  assert.equal(
+    parsedProvenance.sources[0]?.url,
+    "https://official.example.com/update",
+  );
+}
 
-      assert.equal(completed.freshnessVerdict, "passed");
-      assert.equal(completed.reviewStatus, "not_requested");
-      assert.ok(completed.artifactPointers.report);
-      assert.ok(completed.artifactPointers.provenance);
-      assert.ok(completed.artifactPointers.summary);
-
-      const report = await client.getArtifact(created.id, "report.md");
-      assert.match(report, /Hosted Report/);
-      assert.match(report, /Freshness verdict: `passed`/);
-
-      const provenance = await client.getArtifact(
-        created.id,
-        "provenance.json",
-      );
-      const parsedProvenance = JSON.parse(provenance) as {
-        sources: Array<{ url: string }>;
-      };
-      assert.equal(parsedProvenance.sources.length, 2);
-      assert.equal(
-        parsedProvenance.sources[0]?.url,
-        "https://official.example.com/update",
-      );
-    } finally {
-      globalThis.fetch = originalFetch;
-      await app.close();
-    }
+async function runHostedApiScenario(dir: string) {
+  const metadataStore = new FileMetadataStore(path.join(dir, "metadata"));
+  const artifactStore = new FileArtifactStore(path.join(dir, "artifacts"));
+  const { temporalClient } = createInlineTemporalClient({
+    dataDir: dir,
+    metadataStore,
+    artifactStore,
   });
+  const app = await buildServer({
+    metadataStore,
+    artifactStore,
+    temporalClient,
+    taskQueue: "research-agent-test",
+    workflow: Symbol("workflow"),
+  });
+  const originalFetch = await installAppFetch(app);
+
+  try {
+    const client = new ResearchApiClient("http://research-agent.test");
+    const created = await client.createJob({
+      prompt: "What is the latest Deep Agents JavaScript architecture update?",
+      requestedBy: "integration-test",
+    });
+    assert.equal(created.status, "queued");
+    assert.equal(created.executionMode, "hosted");
+
+    const completed = await waitForRun(
+      () => client.getJob(created.id),
+      (record) => record.status === "completed",
+    );
+    assert.equal(completed.freshnessVerdict, "passed");
+    assert.equal(completed.reviewStatus, "not_requested");
+    assert.ok(completed.artifactPointers.report);
+    assert.ok(completed.artifactPointers.provenance);
+    assert.ok(completed.artifactPointers.summary);
+
+    await assertHostedArtifacts(client, created.id);
+  } finally {
+    globalThis.fetch = originalFetch;
+    await app.close();
+  }
+}
+
+test("hosted API completes a background research job end to end and serves final artifacts over HTTP", async () => {
+  await withTempDir(runHostedApiScenario);
 });

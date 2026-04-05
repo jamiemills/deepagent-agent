@@ -1,10 +1,10 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { ChatGoogle } from "@langchain/google/node";
 import { FilesystemBackend, createDeepAgent } from "deepagents";
 
 import type { SourceTracker } from "./core/source-tracker.js";
+import { createResearchModel } from "./model-provider.js";
 import { createBraveSearchTool } from "./tools/brave-search.js";
 import { createFetchUrlTool } from "./tools/fetch-url.js";
 
@@ -40,20 +40,17 @@ export async function buildResearchAgent(args: {
   workspaceRoot: string;
   sourceTracker: SourceTracker;
   model: string;
+  modelProvider: "vertex" | "openai" | "openai-codex" | "anthropic";
+  openAiApiKey: string | undefined;
+  openAiCodexAccessToken: string | undefined;
+  openAiCodexRefreshToken: string | undefined;
+  openAiCodexExpiresAt: number | undefined;
+  openAiCodexAccountId: string | undefined;
+  anthropicApiKey: string | undefined;
 }) {
-  const backend = new FilesystemBackend({
-    rootDir: args.workspaceRoot,
-    virtualMode: true,
-  });
-
-  const braveSearchTool = createBraveSearchTool(args.sourceTracker);
-  const fetchUrlTool = createFetchUrlTool(args.sourceTracker);
-  const agentTools = [braveSearchTool, fetchUrlTool] as never;
-  const model = new ChatGoogle({
-    model: args.model,
-    platformType: "gcp",
-    maxRetries: 2,
-  });
+  const backend = createBackend(args.workspaceRoot);
+  const agentTools = createAgentTools(args.sourceTracker);
+  const model = await createResearchModel(createModelArgs(args));
 
   return createDeepAgent({
     model,
@@ -62,12 +59,52 @@ export async function buildResearchAgent(args: {
     backend,
     memory: [memoryPath],
     skills: [skillsPath],
-    subagents: [
-      {
-        name: "source-researcher",
-        description:
-          "Searches a focused subtopic and returns the strongest candidate sources, notable claims, and evidence gaps.",
-        systemPrompt: `
+    subagents: createSubagents(agentTools),
+  });
+}
+
+function createBackend(workspaceRoot: string) {
+  return new FilesystemBackend({
+    rootDir: workspaceRoot,
+    virtualMode: true,
+  });
+}
+
+function createAgentTools(sourceTracker: SourceTracker) {
+  const braveSearchTool = createBraveSearchTool(sourceTracker);
+  const fetchUrlTool = createFetchUrlTool(sourceTracker);
+  return [braveSearchTool, fetchUrlTool] as never;
+}
+
+function createModelArgs(args: {
+  model: string;
+  modelProvider: "vertex" | "openai" | "openai-codex" | "anthropic";
+  openAiApiKey: string | undefined;
+  openAiCodexAccessToken: string | undefined;
+  openAiCodexRefreshToken: string | undefined;
+  openAiCodexExpiresAt: number | undefined;
+  openAiCodexAccountId: string | undefined;
+  anthropicApiKey: string | undefined;
+}) {
+  return {
+    researchAgentModelProvider: args.modelProvider,
+    researchAgentModel: args.model,
+    openAiApiKey: args.openAiApiKey,
+    openAiCodexAccessToken: args.openAiCodexAccessToken,
+    openAiCodexRefreshToken: args.openAiCodexRefreshToken,
+    openAiCodexExpiresAt: args.openAiCodexExpiresAt,
+    openAiCodexAccountId: args.openAiCodexAccountId,
+    anthropicApiKey: args.anthropicApiKey,
+  };
+}
+
+function createSubagents(agentTools: never) {
+  return [
+    {
+      name: "source-researcher",
+      description:
+        "Searches a focused subtopic and returns the strongest candidate sources, notable claims, and evidence gaps.",
+      systemPrompt: `
 You are a specialist source researcher.
 
 - Use brave_search aggressively but selectively.
@@ -75,13 +112,13 @@ You are a specialist source researcher.
 - Prioritize primary, official, and recent sources.
 - Return concise source-dense findings and unresolved questions.
 `,
-        tools: agentTools,
-      },
-      {
-        name: "fact-checker",
-        description:
-          "Cross-checks important claims, identifies conflicting evidence, and highlights uncertainty or stale support.",
-        systemPrompt: `
+      tools: agentTools,
+    },
+    {
+      name: "fact-checker",
+      description:
+        "Cross-checks important claims, identifies conflicting evidence, and highlights uncertainty or stale support.",
+      systemPrompt: `
 You are a rigorous fact-checker.
 
 - Validate claims using multiple independent sources.
@@ -89,8 +126,7 @@ You are a rigorous fact-checker.
 - Flag conflicts, stale evidence, and unsupported assertions.
 - Return a compact verification memo rather than a full report.
 `,
-        tools: agentTools,
-      },
-    ],
-  });
+      tools: agentTools,
+    },
+  ];
 }

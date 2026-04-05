@@ -36,97 +36,123 @@ function sampleRecord(id: string): ResearchJobRecord {
   };
 }
 
-test("buildServer supports create, get, review, cancel, and artifact retrieval", async () => {
-  await withTempDir(async (dir) => {
-    const metadataStore = new FileMetadataStore(path.join(dir, "metadata"));
-    const artifactStore = new FileArtifactStore(path.join(dir, "artifacts"));
-    const started: Array<{ workflowId: string; taskQueue: string }> = [];
-    const cancelled: string[] = [];
-
-    const temporalClient: TemporalClientLike = {
-      workflow: {
-        async start(_workflow, options) {
-          started.push({
-            workflowId: options.workflowId,
-            taskQueue: options.taskQueue,
-          });
-          return {};
-        },
-        getHandle(workflowId: string) {
-          return {
-            async cancel() {
-              cancelled.push(workflowId);
-            },
-          };
-        },
+function createTemporalClient(
+  started: Array<{ workflowId: string; taskQueue: string }>,
+  cancelled: string[],
+): TemporalClientLike {
+  return {
+    workflow: {
+      async start(_workflow, options) {
+        started.push({
+          workflowId: options.workflowId,
+          taskQueue: options.taskQueue,
+        });
+        return {};
       },
-    };
+      getHandle(workflowId: string) {
+        return {
+          async cancel() {
+            cancelled.push(workflowId);
+          },
+        };
+      },
+    },
+  };
+}
 
-    const app = await buildServer({
-      metadataStore,
-      artifactStore,
-      temporalClient,
-      taskQueue: "research-agent",
-      workflow: Symbol("workflow"),
-    });
+async function createJob(app: Awaited<ReturnType<typeof buildServer>>) {
+  const createResponse = await app.inject({
+    method: "POST",
+    url: "/research-jobs",
+    payload: {
+      prompt: "What is the latest market update?",
+      requestedBy: "jamie",
+    },
+  });
+  assert.equal(createResponse.statusCode, 202);
+  return createResponse.json() as ResearchJobRecord;
+}
 
+async function assertReviewAndCancelFlow(args: {
+  app: Awaited<ReturnType<typeof buildServer>>;
+  runId: string;
+  cancelled: string[];
+}) {
+  const getResponse = await args.app.inject({
+    method: "GET",
+    url: `/research-jobs/${args.runId}`,
+  });
+  assert.equal(getResponse.statusCode, 200);
+
+  const reviewResponse = await args.app.inject({
+    method: "POST",
+    url: `/research-jobs/${args.runId}/review`,
+    payload: { decision: "approved", notes: "checked" },
+  });
+  assert.equal(reviewResponse.statusCode, 200);
+  const reviewed = reviewResponse.json() as ResearchJobRecord;
+  assert.equal(reviewed.reviewStatus, "approved");
+  assert.equal(reviewed.status, "completed");
+  assert.equal(reviewed.reviewNotes, "checked");
+
+  const cancelResponse = await args.app.inject({
+    method: "POST",
+    url: `/research-jobs/${args.runId}/cancel`,
+  });
+  assert.equal(cancelResponse.statusCode, 200);
+  assert.deepEqual(args.cancelled, [args.runId]);
+}
+
+async function assertArtifactRoutes(
+  app: Awaited<ReturnType<typeof buildServer>>,
+) {
+  const artifactResponse = await app.inject({
+    method: "GET",
+    url: "/research-jobs/artifact-run/artifacts/report.md",
+  });
+  assert.equal(artifactResponse.statusCode, 200);
+  assert.match(artifactResponse.body, /# Report/);
+
+  const missingArtifactResponse = await app.inject({
+    method: "GET",
+    url: "/research-jobs/artifact-run/artifacts/missing.md",
+  });
+  assert.equal(missingArtifactResponse.statusCode, 404);
+}
+
+async function runServerScenario(dir: string) {
+  const metadataStore = new FileMetadataStore(path.join(dir, "metadata"));
+  const artifactStore = new FileArtifactStore(path.join(dir, "artifacts"));
+  const started: Array<{ workflowId: string; taskQueue: string }> = [];
+  const cancelled: string[] = [];
+  const app = await buildServer({
+    metadataStore,
+    artifactStore,
+    temporalClient: createTemporalClient(started, cancelled),
+    taskQueue: "research-agent",
+    workflow: Symbol("workflow"),
+  });
+
+  try {
     await artifactStore.writeText("artifact-run", "report.md", "# Report");
     await metadataStore.createRun(sampleRecord("artifact-run"));
 
-    const createResponse = await app.inject({
-      method: "POST",
-      url: "/research-jobs",
-      payload: {
-        prompt: "What is the latest market update?",
-        requestedBy: "jamie",
-      },
-    });
-    assert.equal(createResponse.statusCode, 202);
-    const created = createResponse.json() as ResearchJobRecord;
+    const created = await createJob(app);
     assert.equal(created.status, "queued");
     assert.equal(started.length, 1);
     assert.equal(started[0]?.workflowId, created.id);
 
-    const getResponse = await app.inject({
-      method: "GET",
-      url: `/research-jobs/${created.id}`,
+    await assertReviewAndCancelFlow({
+      app,
+      runId: created.id,
+      cancelled,
     });
-    assert.equal(getResponse.statusCode, 200);
-
-    const reviewResponse = await app.inject({
-      method: "POST",
-      url: `/research-jobs/${created.id}/review`,
-      payload: {
-        decision: "approved",
-        notes: "checked",
-      },
-    });
-    assert.equal(reviewResponse.statusCode, 200);
-    const reviewed = reviewResponse.json() as ResearchJobRecord;
-    assert.equal(reviewed.reviewStatus, "approved");
-    assert.equal(reviewed.status, "completed");
-    assert.equal(reviewed.reviewNotes, "checked");
-
-    const cancelResponse = await app.inject({
-      method: "POST",
-      url: `/research-jobs/${created.id}/cancel`,
-    });
-    assert.equal(cancelResponse.statusCode, 200);
-    assert.deepEqual(cancelled, [created.id]);
-
-    const artifactResponse = await app.inject({
-      method: "GET",
-      url: "/research-jobs/artifact-run/artifacts/report.md",
-    });
-    assert.equal(artifactResponse.statusCode, 200);
-    assert.match(artifactResponse.body, /# Report/);
-
-    const missingArtifactResponse = await app.inject({
-      method: "GET",
-      url: "/research-jobs/artifact-run/artifacts/missing.md",
-    });
-    assert.equal(missingArtifactResponse.statusCode, 404);
-
+    await assertArtifactRoutes(app);
+  } finally {
     await app.close();
-  });
+  }
+}
+
+test("buildServer supports create, get, review, cancel, and artifact retrieval", async () => {
+  await withTempDir(runServerScenario);
 });

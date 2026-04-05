@@ -2,6 +2,7 @@ import path from "node:path";
 
 import { loadConfig } from "../config.js";
 import { executeResearchRun } from "../core/research-runner.js";
+import { hostedResearchJobInputSchema } from "../core/schemas.js";
 import type { ResearchJobRecord, ResearchJobRequest } from "../core/types.js";
 import { FileArtifactStore } from "../storage/file-artifact-store.js";
 import { FileMetadataStore } from "../storage/file-metadata-store.js";
@@ -26,9 +27,10 @@ export function createActivities(deps?: {
       runId: string;
       request: ResearchJobRequest;
     }): Promise<ResearchJobRecord> {
+      const payload = hostedResearchJobInputSchema.parse(input);
       return executeRun({
-        runId: input.runId,
-        request: input.request,
+        runId: payload.runId,
+        request: payload.request,
         executionMode: "hosted",
         metadataStore,
         artifactStore,

@@ -30,6 +30,13 @@ function makeDeps(
     workspaceRoot: string;
     sourceTracker: SourceTracker;
     model: string;
+    modelProvider: "vertex" | "openai" | "openai-codex" | "anthropic";
+    openAiApiKey: string | undefined;
+    openAiCodexAccessToken: string | undefined;
+    openAiCodexRefreshToken: string | undefined;
+    openAiCodexExpiresAt: number | undefined;
+    openAiCodexAccountId: string | undefined;
+    anthropicApiKey: string | undefined;
   }) => Promise<{
     invoke(
       input: unknown,
@@ -41,10 +48,189 @@ function makeDeps(
     config: {
       dataDir,
       researchAgentModel: "test-model",
+      researchAgentModelProvider: "vertex" as const,
+      openAiApiKey: undefined,
+      openAiCodexAccessToken: undefined,
+      openAiCodexRefreshToken: undefined,
+      openAiCodexExpiresAt: undefined,
+      openAiCodexAccountId: undefined,
+      anthropicApiKey: undefined,
     },
     sourceTracker,
     buildAgent,
   };
+}
+
+async function createQueuedRun(args: {
+  metadataStore: FileMetadataStore;
+  runId: string;
+  prompt: string;
+  executionMode: "local" | "hosted";
+}) {
+  await createRunRecord({
+    request: { prompt: args.prompt },
+    executionMode: args.executionMode,
+    metadataStore: args.metadataStore,
+    runId: args.runId,
+  });
+}
+
+async function buildSuccessWorkspace(args: {
+  workspaceRoot: string;
+  sourceTracker: SourceTracker;
+}) {
+  await fs.mkdir(path.join(args.workspaceRoot, "out"), { recursive: true });
+  await fs.mkdir(path.join(args.workspaceRoot, "notes"), { recursive: true });
+  await fs.writeFile(
+    path.join(args.workspaceRoot, "out", "final-report.md"),
+    "# Final Report\n\nBody",
+  );
+  await fs.writeFile(
+    path.join(args.workspaceRoot, "out", "claim-ledger.json"),
+    JSON.stringify([
+      {
+        claim: "Claim A",
+        sourceUrls: ["https://official.example.com"],
+      },
+    ]),
+  );
+  await fs.writeFile(
+    path.join(args.workspaceRoot, "notes", "working.md"),
+    "notes",
+  );
+  args.sourceTracker.recordSearch({
+    query: "query",
+    observedAt: new Date().toISOString(),
+    results: [
+      {
+        title: "Official Source",
+        url: "https://official.example.com/update",
+        description: "desc",
+        language: "en",
+        age: "2 days ago",
+      },
+      {
+        title: "News Source",
+        url: "https://news.example.com/story",
+        description: "desc",
+        language: "en",
+        age: "4 days ago",
+      },
+    ],
+  });
+}
+
+async function buildSuccessAgent(args: {
+  workspaceRoot: string;
+  sourceTracker: SourceTracker;
+}) {
+  await buildSuccessWorkspace(args);
+  return {
+    async invoke() {
+      return {
+        messages: [{ type: "ai", content: "fallback report text" }],
+      };
+    },
+  };
+}
+
+async function assertCompletedArtifacts(args: {
+  artifactStore: FileArtifactStore;
+  completed: Awaited<ReturnType<typeof executeResearchRun>>;
+  runId: string;
+}) {
+  assert.equal(args.completed.status, "completed");
+  assert.equal(args.completed.freshnessVerdict, "passed");
+  assert.ok(args.completed.artifactPointers.report);
+  assert.ok(args.completed.artifactPointers.provenance);
+  assert.ok(args.completed.artifactPointers.summary);
+  assert.deepEqual(args.completed.artifactPointers.notes, ["notes/working.md"]);
+  assert.deepEqual(args.completed.artifactPointers.out, [
+    "out/claim-ledger.json",
+    "out/final-report.md",
+  ]);
+
+  const artifacts = await args.artifactStore.listArtifacts(args.runId);
+  assert.deepEqual(artifacts, [
+    "notes/working.md",
+    "out/claim-ledger.json",
+    "out/final-report.md",
+    "provenance.json",
+    "report.md",
+    "summary.json",
+  ]);
+}
+
+async function runSuccessScenario(dir: string) {
+  const metadataStore = new FileMetadataStore(path.join(dir, "metadata"));
+  const artifactStore = new FileArtifactStore(path.join(dir, "artifacts"));
+  const sourceTracker = new SourceTracker();
+  const runId = "run-success";
+  const prompt = "What is the latest UK AI market update?";
+
+  await createQueuedRun({
+    metadataStore,
+    runId,
+    prompt,
+    executionMode: "local",
+  });
+  const completed = await executeResearchRun({
+    runId,
+    request: { prompt },
+    executionMode: "local",
+    metadataStore,
+    artifactStore,
+    deps: makeDeps(dir, sourceTracker, buildSuccessAgent),
+  });
+
+  await assertCompletedArtifacts({ artifactStore, completed, runId });
+  const report = (
+    await artifactStore.readArtifact(runId, "report.md")
+  ).toString("utf8");
+  assert.match(report, /Freshness verdict: `passed`/);
+  assert.match(report, /# Final Report/);
+}
+
+async function buildFreshnessFailureAgent(args: { workspaceRoot: string }) {
+  await fs.mkdir(path.join(args.workspaceRoot, "out"), { recursive: true });
+  await fs.writeFile(
+    path.join(args.workspaceRoot, "out", "final-report.md"),
+    "Report body",
+  );
+  return {
+    async invoke() {
+      return {
+        messages: [{ type: "ai", content: "fallback report text" }],
+      };
+    },
+  };
+}
+
+async function runFreshnessFailureScenario(dir: string) {
+  const metadataStore = new FileMetadataStore(path.join(dir, "metadata"));
+  const artifactStore = new FileArtifactStore(path.join(dir, "artifacts"));
+  const sourceTracker = new SourceTracker();
+  const runId = "run-freshness-fail";
+  const prompt = "What is the latest state of the market?";
+
+  await createQueuedRun({
+    metadataStore,
+    runId,
+    prompt,
+    executionMode: "hosted",
+  });
+  const completed = await executeResearchRun({
+    runId,
+    request: { prompt },
+    executionMode: "hosted",
+    metadataStore,
+    artifactStore,
+    deps: makeDeps(dir, sourceTracker, buildFreshnessFailureAgent),
+  });
+
+  assert.equal(completed.status, "awaiting_review");
+  assert.equal(completed.reviewStatus, "pending");
+  assert.equal(completed.freshnessVerdict, "failed");
 }
 
 test("createRunRecord classifies freshness sensitivity from the prompt", async () => {
@@ -63,154 +249,11 @@ test("createRunRecord classifies freshness sensitivity from the prompt", async (
 });
 
 test("executeResearchRun completes and persists report, provenance, summary, and workspace artifacts", async () => {
-  await withTempDir(async (dir) => {
-    const metadataStore = new FileMetadataStore(path.join(dir, "metadata"));
-    const artifactStore = new FileArtifactStore(path.join(dir, "artifacts"));
-    const sourceTracker = new SourceTracker();
-    const runId = "run-success";
-    const prompt = "What is the latest UK AI market update?";
-
-    await createRunRecord({
-      request: { prompt },
-      executionMode: "local",
-      metadataStore,
-      runId,
-    });
-
-    const completed = await executeResearchRun({
-      runId,
-      request: { prompt },
-      executionMode: "local",
-      metadataStore,
-      artifactStore,
-      deps: makeDeps(
-        dir,
-        sourceTracker,
-        async ({ workspaceRoot, sourceTracker: tracker }) => {
-          await fs.mkdir(path.join(workspaceRoot, "out"), { recursive: true });
-          await fs.mkdir(path.join(workspaceRoot, "notes"), {
-            recursive: true,
-          });
-          await fs.writeFile(
-            path.join(workspaceRoot, "out", "final-report.md"),
-            "# Final Report\n\nBody",
-          );
-          await fs.writeFile(
-            path.join(workspaceRoot, "out", "claim-ledger.json"),
-            JSON.stringify([
-              {
-                claim: "Claim A",
-                sourceUrls: ["https://official.example.com"],
-              },
-            ]),
-          );
-          await fs.writeFile(
-            path.join(workspaceRoot, "notes", "working.md"),
-            "notes",
-          );
-
-          tracker.recordSearch({
-            query: "query",
-            observedAt: new Date().toISOString(),
-            results: [
-              {
-                title: "Official Source",
-                url: "https://official.example.com/update",
-                description: "desc",
-                language: "en",
-                age: "2 days ago",
-              },
-              {
-                title: "News Source",
-                url: "https://news.example.com/story",
-                description: "desc",
-                language: "en",
-                age: "4 days ago",
-              },
-            ],
-          });
-
-          return {
-            async invoke() {
-              return {
-                messages: [{ type: "ai", content: "fallback report text" }],
-              };
-            },
-          };
-        },
-      ),
-    });
-
-    assert.equal(completed.status, "completed");
-    assert.equal(completed.freshnessVerdict, "passed");
-    assert.ok(completed.artifactPointers.report);
-    assert.ok(completed.artifactPointers.provenance);
-    assert.ok(completed.artifactPointers.summary);
-    assert.deepEqual(completed.artifactPointers.notes, ["notes/working.md"]);
-    assert.deepEqual(completed.artifactPointers.out, [
-      "out/claim-ledger.json",
-      "out/final-report.md",
-    ]);
-
-    const artifacts = await artifactStore.listArtifacts(runId);
-    assert.deepEqual(artifacts, [
-      "notes/working.md",
-      "out/claim-ledger.json",
-      "out/final-report.md",
-      "provenance.json",
-      "report.md",
-      "summary.json",
-    ]);
-
-    const report = (
-      await artifactStore.readArtifact(runId, "report.md")
-    ).toString("utf8");
-    assert.match(report, /Freshness verdict: `passed`/);
-    assert.match(report, /# Final Report/);
-  });
+  await withTempDir(runSuccessScenario);
 });
 
 test("executeResearchRun forces review when freshness fails for time-sensitive prompts", async () => {
-  await withTempDir(async (dir) => {
-    const metadataStore = new FileMetadataStore(path.join(dir, "metadata"));
-    const artifactStore = new FileArtifactStore(path.join(dir, "artifacts"));
-    const sourceTracker = new SourceTracker();
-    const runId = "run-freshness-fail";
-    const prompt = "What is the latest state of the market?";
-
-    await createRunRecord({
-      request: { prompt },
-      executionMode: "hosted",
-      metadataStore,
-      runId,
-    });
-
-    const completed = await executeResearchRun({
-      runId,
-      request: { prompt },
-      executionMode: "hosted",
-      metadataStore,
-      artifactStore,
-      deps: makeDeps(dir, sourceTracker, async ({ workspaceRoot }) => {
-        await fs.mkdir(path.join(workspaceRoot, "out"), { recursive: true });
-        await fs.writeFile(
-          path.join(workspaceRoot, "out", "final-report.md"),
-          "Report body",
-        );
-        return {
-          async invoke() {
-            return {
-              messages: [{ type: "ai", content: "fallback report text" }],
-            };
-          },
-        };
-      }),
-    });
-
-    assert.equal(completed.status, "awaiting_review");
-    assert.equal(completed.reviewStatus, "pending");
-    assert.equal(completed.freshnessVerdict, "failed");
-  });
+  await withTempDir(runFreshnessFailureScenario);
 });
 
 test("executeResearchRun records failures without rethrow when configured that way", async () => {

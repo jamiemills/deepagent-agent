@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
-import { z } from "zod";
+import z from "zod/v3";
 
 import { claimLedgerRecordSchema } from "./schemas.js";
 import type {
