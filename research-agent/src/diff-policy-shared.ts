@@ -10,6 +10,9 @@ export const PROTECTED_PATHS = [
   ".githooks/pre-commit",
   ".githooks/pre-push",
   "scripts/check-diff-policies.mjs",
+  "scripts/run-agent-policy.mjs",
+  "scripts/run-step-sequence.mjs",
+  "scripts/run-verify.mjs",
   "src/diff-policy.ts",
   "src/diff-policy-complexity.ts",
   "src/diff-policy-config.ts",
@@ -18,13 +21,7 @@ export const PROTECTED_PATHS = [
   "src/diff-policy-shared.ts",
   "semgrep/rules/**",
 ] as const;
-export const REQUIRED_VERIFY_SNIPPETS = [
-  "bunx biome check .",
-  "bun run typecheck",
-  "bun run lint:complexity",
-  "bun run lint:semgrep",
-  "bun run test",
-] as const;
+export const REQUIRED_VERIFY_SNIPPETS = ["bun scripts/run-verify.mjs"] as const;
 export const REQUIRED_SEMGREP_RULES = [
   "semgrep/rules/no-as-any.yml",
   "semgrep/rules/no-config-weakening.yml",

@@ -1,5 +1,6 @@
 import {
   KNOWN_POLICIES,
+  POLICY_EXCEPTION_MANIFEST,
   type PolicyManifest,
   type PolicyViolation,
   matchPolicyPath,
@@ -154,6 +155,7 @@ function findUncoveredViolationPaths(args: {
 }) {
   return args.violation.paths.filter(
     (path) =>
+      path !== POLICY_EXCEPTION_MANIFEST &&
       !args.matchingEntries.some((entry) =>
         entry.paths.some((pattern) => matchPolicyPath(pattern, path)),
       ),
@@ -180,6 +182,22 @@ export function getUncoveredViolations(args: {
   });
 }
 
+function getManifestEntryIssues(args: {
+  manifest: PolicyManifest;
+  stagedFiles: string[];
+  seenIds: Set<string>;
+  today: Date;
+}) {
+  return args.manifest.exceptions.flatMap((entry) =>
+    validateManifestEntry({
+      entry,
+      stagedFiles: args.stagedFiles,
+      seenIds: args.seenIds,
+      today: args.today,
+    }),
+  );
+}
+
 export function validatePolicyManifest(args: {
   manifest: PolicyManifest;
   stagedFiles: string[];
@@ -187,14 +205,14 @@ export function validatePolicyManifest(args: {
   today: Date | undefined;
 }): string[] {
   const issues: string[] = [];
-  const usedIds = new Set<string>();
   const seenIds = new Set<string>();
   const today = args.today ?? new Date();
+  const manifestTouched = args.stagedFiles.includes(POLICY_EXCEPTION_MANIFEST);
 
-  for (const entry of args.manifest.exceptions) {
+  if (manifestTouched) {
     issues.push(
-      ...validateManifestEntry({
-        entry,
+      ...getManifestEntryIssues({
+        manifest: args.manifest,
         stagedFiles: args.stagedFiles,
         seenIds,
         today,
@@ -207,9 +225,6 @@ export function validatePolicyManifest(args: {
       manifest: args.manifest,
       violation,
     });
-    for (const entry of matchingEntries) {
-      usedIds.add(entry.id);
-    }
 
     const uncoveredPaths = findUncoveredViolationPaths({
       violation,
@@ -220,14 +235,6 @@ export function validatePolicyManifest(args: {
         `Policy "${violation.policy}" requires an exception for: ${uncoveredPaths.join(
           ", ",
         )}.`,
-      );
-    }
-  }
-
-  for (const entry of args.manifest.exceptions) {
-    if (!usedIds.has(entry.id)) {
-      issues.push(
-        `Exception "${entry.id}" is unused for the current staged diff.`,
       );
     }
   }
