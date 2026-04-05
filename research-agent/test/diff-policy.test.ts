@@ -122,7 +122,7 @@ test("requires enforcement-change exceptions for protected paths", () => {
   });
 });
 
-test("rejects invalid or unused exceptions", () => {
+test("rejects invalid exceptions when the manifest is touched", () => {
   const manifest = parsePolicyManifest(
     JSON.stringify({
       version: 1,
@@ -142,17 +142,20 @@ test("rejects invalid or unused exceptions", () => {
 
   withGitShow(makeValidGitShowMap(), () => {
     const result = evaluateDiffPolicies({
-      stagedEntries: [{ status: "M", path: "src/core/freshness.ts" }],
-      diffStats: [{ path: "src/core/freshness.ts", added: 1, deleted: 1 }],
+      stagedEntries: [
+        { status: "M", path: "policy-exceptions.json" },
+        { status: "M", path: "src/core/freshness.ts" },
+      ],
+      diffStats: [
+        { path: "policy-exceptions.json", added: 1, deleted: 0 },
+        { path: "src/core/freshness.ts", added: 1, deleted: 1 },
+      ],
       manifestRaw: JSON.stringify(manifest),
       today: new Date("2026-04-04"),
     });
 
     expect(result.manifestIssues).toContain(
       'Exception "expired-large-diff" expired on 2026-01-01.',
-    );
-    expect(result.manifestIssues).toContain(
-      'Exception "expired-large-diff" is unused for the current staged diff.',
     );
   });
 });

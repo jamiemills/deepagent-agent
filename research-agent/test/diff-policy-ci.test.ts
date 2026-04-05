@@ -109,3 +109,27 @@ test("does not require an exception for the manifest self-edit path", () => {
     expect(result.manifestIssues).toEqual([]);
   });
 });
+
+test("does not reject committed exceptions when the manifest is unchanged", () => {
+  const manifestRaw = JSON.stringify({
+    version: 1,
+    exceptions: [
+      {
+        id: "stale-large-diff",
+        policy: "large-diff",
+        paths: ["README.md"],
+        reason: "Reviewed exception remains committed.",
+        expiresOn: "2026-01-01",
+      },
+    ],
+  });
+
+  const result = evaluateDiffPolicies({
+    stagedEntries: [{ status: "M", path: "src/core/freshness.ts" }],
+    diffStats: [{ path: "src/core/freshness.ts", added: 1, deleted: 1 }],
+    manifestRaw,
+    today: new Date("2026-04-05"),
+  });
+
+  expect(result.manifestIssues).toEqual([]);
+});
