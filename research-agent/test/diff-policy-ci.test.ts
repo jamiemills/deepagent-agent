@@ -110,26 +110,56 @@ test("does not require an exception for the manifest self-edit path", () => {
   });
 });
 
-test("does not reject committed exceptions when the manifest is unchanged", () => {
+test("keeps valid committed exceptions active when the manifest is unchanged", () => {
   const manifestRaw = JSON.stringify({
     version: 1,
     exceptions: [
       {
-        id: "stale-large-diff",
+        id: "active-large-diff",
         policy: "large-diff",
         paths: ["README.md"],
         reason: "Reviewed exception remains committed.",
+        expiresOn: "2026-05-01",
+      },
+    ],
+  });
+
+  const result = evaluateDiffPolicies({
+    stagedEntries: [{ status: "M", path: "README.md" }],
+    diffStats: [{ path: "README.md", added: 200, deleted: 10 }],
+    manifestRaw,
+    today: new Date("2026-04-05"),
+  });
+
+  expect(result.violations).toEqual([]);
+  expect(result.manifestIssues).toEqual([]);
+});
+
+test("does not honor expired committed exceptions when the manifest is unchanged", () => {
+  const manifestRaw = JSON.stringify({
+    version: 1,
+    exceptions: [
+      {
+        id: "expired-large-diff",
+        policy: "large-diff",
+        paths: ["README.md"],
+        reason: "Expired reviewed exception.",
         expiresOn: "2026-01-01",
       },
     ],
   });
 
   const result = evaluateDiffPolicies({
-    stagedEntries: [{ status: "M", path: "src/core/freshness.ts" }],
-    diffStats: [{ path: "src/core/freshness.ts", added: 1, deleted: 1 }],
+    stagedEntries: [{ status: "M", path: "README.md" }],
+    diffStats: [{ path: "README.md", added: 200, deleted: 10 }],
     manifestRaw,
     today: new Date("2026-04-05"),
   });
 
-  expect(result.manifestIssues).toEqual([]);
+  expect(result.violations.map((violation) => violation.policy)).toContain(
+    "large-diff",
+  );
+  expect(result.manifestIssues).toContain(
+    'Exception "expired-large-diff" expired on 2026-01-01.',
+  );
 });
