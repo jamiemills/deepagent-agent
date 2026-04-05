@@ -48,12 +48,12 @@ function buildEnforcementChangeViolation(
 function buildConfigWeakeningViolation(args: {
   protectedFiles: string[];
   stagedEntries: StagedEntry[];
-  readStagedFile: (path: string) => string | null;
+  readCurrentFile: (path: string) => string | null;
 }): PolicyViolation | null {
   const { issues, ruleDeletions, missingRequiredRules } =
     collectConfigWeakeningIssues({
       stagedEntries: args.stagedEntries,
-      readStagedFile: args.readStagedFile,
+      readCurrentFile: args.readCurrentFile,
     });
 
   if (issues.length === 0) {
@@ -75,6 +75,9 @@ function buildConfigWeakeningViolation(args: {
         ".github/workflows/agent-policy.yml",
         ".githooks/pre-push",
         "scripts/check-diff-policies.mjs",
+        "scripts/run-agent-policy.mjs",
+        "scripts/run-step-sequence.mjs",
+        "scripts/run-verify.mjs",
         "src/diff-policy-complexity.ts",
         "src/diff-policy-config.ts",
         "src/diff-policy-shared.ts",
@@ -87,16 +90,16 @@ function buildConfigWeakeningViolation(args: {
 
 function buildComplexityRegressionViolation(args: {
   stagedEntries: StagedEntry[];
-  readStagedFile: (path: string) => string | null;
-  readHeadFile: (path: string) => string | null;
+  readCurrentFile: (path: string) => string | null;
+  readPreviousFile: (path: string) => string | null;
 }): PolicyViolation | null {
   const regressions = args.stagedEntries
     .filter((entry) => isTrackedTypeScriptChange(entry))
     .map((entry) =>
       findComplexityRegression({
         path: entry.path,
-        beforeSource: args.readHeadFile(entry.path),
-        afterSource: args.readStagedFile(entry.path),
+        beforeSource: args.readPreviousFile(entry.path),
+        afterSource: args.readCurrentFile(entry.path),
       }),
     )
     .filter(
@@ -134,8 +137,8 @@ function isTrackedTypeScriptChange(entry: StagedEntry): boolean {
 export function collectPolicyViolations(args: {
   stagedEntries: StagedEntry[];
   diffStats: DiffStat[];
-  readStagedFile: (path: string) => string | null;
-  readHeadFile: (path: string) => string | null;
+  readCurrentFile: (path: string) => string | null;
+  readPreviousFile: (path: string) => string | null;
 }): PolicyViolation[] {
   const stagedFiles = args.stagedEntries.map((entry) => entry.path);
   const protectedFiles = stagedFiles.filter(touchesProtectedPath);
@@ -145,12 +148,12 @@ export function collectPolicyViolations(args: {
     buildConfigWeakeningViolation({
       protectedFiles,
       stagedEntries: args.stagedEntries,
-      readStagedFile: args.readStagedFile,
+      readCurrentFile: args.readCurrentFile,
     }),
     buildComplexityRegressionViolation({
       stagedEntries: args.stagedEntries,
-      readStagedFile: args.readStagedFile,
-      readHeadFile: args.readHeadFile,
+      readCurrentFile: args.readCurrentFile,
+      readPreviousFile: args.readPreviousFile,
     }),
   ];
 

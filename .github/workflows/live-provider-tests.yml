@@ -1,0 +1,85 @@
+name: live-provider-tests
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live-vertex:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: research-agent
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.11"
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Materialize Vertex ADC file
+        shell: bash
+        run: |
+          if [ -z "${VERTEX_GOOGLE_APPLICATION_CREDENTIALS_JSON:-}" ] || [ -z "${VERTEX_GOOGLE_CLOUD_PROJECT:-}" ]; then
+            echo "Skipping live Vertex tests because required secrets are missing." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          printf '%s' "$VERTEX_GOOGLE_APPLICATION_CREDENTIALS_JSON" > "$RUNNER_TEMP/vertex-adc.json"
+        env:
+          VERTEX_GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.VERTEX_GOOGLE_APPLICATION_CREDENTIALS_JSON }}
+          VERTEX_GOOGLE_CLOUD_PROJECT: ${{ secrets.VERTEX_GOOGLE_CLOUD_PROJECT }}
+
+      - name: Run live Vertex suite
+        shell: bash
+        run: |
+          if [ ! -f "$RUNNER_TEMP/vertex-adc.json" ]; then
+            exit 0
+          fi
+          RESEARCH_AGENT_MODEL_PROVIDER=vertex \
+          GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/vertex-adc.json" \
+          GOOGLE_CLOUD_PROJECT="$VERTEX_GOOGLE_CLOUD_PROJECT" \
+          RUN_DEEPAGENT_SMOKE=1 \
+          RUN_LIVE_CLI_LOCAL_TEST=1 \
+          bun run test:provider:vertex
+        env:
+          VERTEX_GOOGLE_CLOUD_PROJECT: ${{ secrets.VERTEX_GOOGLE_CLOUD_PROJECT }}
+
+  live-openai-codex:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: research-agent
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.11"
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Run live OpenAI Codex suite
+        shell: bash
+        run: |
+          if [ -z "${OPENAI_CODEX_ACCESS_TOKEN:-}" ]; then
+            echo "Skipping live OpenAI Codex tests because OPENAI_CODEX_ACCESS_TOKEN is not configured." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          RESEARCH_AGENT_MODEL_PROVIDER=openai-codex \
+          RESEARCH_AGENT_MODEL_OPENAI_CODEX="${RESEARCH_AGENT_MODEL_OPENAI_CODEX:-gpt-5.2}" \
+          RUN_DEEPAGENT_SMOKE=1 \
+          RUN_LIVE_CLI_LOCAL_TEST=1 \
+          bun run test:provider:openai-codex
+        env:
+          OPENAI_CODEX_ACCESS_TOKEN: ${{ secrets.OPENAI_CODEX_ACCESS_TOKEN }}
+          RESEARCH_AGENT_MODEL_OPENAI_CODEX: ${{ vars.RESEARCH_AGENT_MODEL_OPENAI_CODEX }}

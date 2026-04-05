@@ -5,16 +5,16 @@ import {
 } from "./diff-policy-shared.js";
 
 function ensureRequiredRulesExist(
-  readStagedFile: (path: string) => string | null,
+  readCurrentFile: (path: string) => string | null,
 ) {
-  return REQUIRED_SEMGREP_RULES.filter((path) => !readStagedFile(path));
+  return REQUIRED_SEMGREP_RULES.filter((path) => !readCurrentFile(path));
 }
 
 function parseJsonFile(
   path: string,
-  readStagedFile: (path: string) => string | null,
+  readCurrentFile: (path: string) => string | null,
 ): unknown {
-  const raw = readStagedFile(path);
+  const raw = readCurrentFile(path);
   return raw ? (JSON.parse(raw) as unknown) : null;
 }
 
@@ -75,9 +75,9 @@ function getLintSemgrepIssues(lintSemgrep: string | undefined): string[] {
 }
 
 function getPackageWeakeningIssues(
-  readStagedFile: (path: string) => string | null,
+  readCurrentFile: (path: string) => string | null,
 ): string[] {
-  const packageJson = parseJsonFile("package.json", readStagedFile) as {
+  const packageJson = parseJsonFile("package.json", readCurrentFile) as {
     scripts?: Record<string, string>;
   } | null;
   if (!packageJson) {
@@ -100,7 +100,7 @@ function getAgentPolicyScriptIssues(agentPolicy: string | undefined): string[] {
     return [];
   }
 
-  return ["bun run policy:diff", "bun run verify", "bun run lint:typed"]
+  return ["bun scripts/run-agent-policy.mjs"]
     .filter((snippet) => !agentPolicy.includes(snippet))
     .map((snippet) => `agent-policy must include "${snippet}".`);
 }
@@ -130,9 +130,9 @@ function getTypedLintIssues(lintTyped: string | undefined): string[] {
 }
 
 function getBiomeWeakeningIssues(
-  readStagedFile: (path: string) => string | null,
+  readCurrentFile: (path: string) => string | null,
 ): string[] {
-  const biomeJson = parseJsonFile("biome.json", readStagedFile) as {
+  const biomeJson = parseJsonFile("biome.json", readCurrentFile) as {
     files?: { ignore?: string[] };
     linter?: {
       rules?: {
@@ -187,9 +187,9 @@ function getBiomeNonNullAssertionIssue(biomeJson: {
 }
 
 function getEslintWeakeningIssues(
-  readStagedFile: (path: string) => string | null,
+  readCurrentFile: (path: string) => string | null,
 ): string[] {
-  const eslintConfig = readStagedFile("eslint.complexity.config.mjs");
+  const eslintConfig = readCurrentFile("eslint.complexity.config.mjs");
   if (!eslintConfig) {
     return ["eslint.complexity.config.mjs is missing from the staged tree."];
   }
@@ -221,9 +221,9 @@ function getEslintWeakeningIssues(
 }
 
 function getTypedEslintWeakeningIssues(
-  readStagedFile: (path: string) => string | null,
+  readCurrentFile: (path: string) => string | null,
 ): string[] {
-  const typedConfig = readStagedFile("eslint.typed.config.mjs");
+  const typedConfig = readCurrentFile("eslint.typed.config.mjs");
   if (!typedConfig) {
     return ["eslint.typed.config.mjs is missing from the staged tree."];
   }
@@ -239,9 +239,9 @@ function getTypedEslintWeakeningIssues(
 }
 
 function getDiffPolicyWeakeningIssues(
-  readStagedFile: (path: string) => string | null,
+  readCurrentFile: (path: string) => string | null,
 ): string[] {
-  const diffPolicyShared = readStagedFile("src/diff-policy-shared.ts");
+  const diffPolicyShared = readCurrentFile("src/diff-policy-shared.ts");
   if (!diffPolicyShared) {
     return ["src/diff-policy-shared.ts is missing from the staged tree."];
   }
@@ -251,6 +251,9 @@ function getDiffPolicyWeakeningIssues(
     "export const MAX_CHANGED_LINES = 150;",
     "export const MAX_CHANGED_FILES = 5;",
     '"scripts/check-diff-policies.mjs"',
+    '"scripts/run-agent-policy.mjs"',
+    '"scripts/run-step-sequence.mjs"',
+    '"scripts/run-verify.mjs"',
     '"src/diff-policy.ts"',
     '"src/diff-policy-complexity.ts"',
     '"src/diff-policy-config.ts"',
@@ -268,9 +271,9 @@ function getDiffPolicyWeakeningIssues(
 }
 
 function getTsconfigWeakeningIssues(
-  readStagedFile: (path: string) => string | null,
+  readCurrentFile: (path: string) => string | null,
 ): string[] {
-  const tsconfigJson = parseJsonFile("tsconfig.json", readStagedFile) as {
+  const tsconfigJson = parseJsonFile("tsconfig.json", readCurrentFile) as {
     compilerOptions?: { skipLibCheck?: boolean };
   } | null;
   if (!tsconfigJson) {
@@ -283,9 +286,9 @@ function getTsconfigWeakeningIssues(
 }
 
 function getPrePushWeakeningIssues(
-  readStagedFile: (path: string) => string | null,
+  readCurrentFile: (path: string) => string | null,
 ): string[] {
-  const prePush = readStagedFile(".githooks/pre-push");
+  const prePush = readCurrentFile(".githooks/pre-push");
   if (!prePush) {
     return [".githooks/pre-push is missing from the staged tree."];
   }
@@ -296,32 +299,45 @@ function getPrePushWeakeningIssues(
 }
 
 function getWorkflowWeakeningIssues(
-  readStagedFile: (path: string) => string | null,
+  readCurrentFile: (path: string) => string | null,
 ): string[] {
-  const workflow = readStagedFile(".github/workflows/agent-policy.yml");
+  const workflow = readCurrentFile(".github/workflows/agent-policy.yml");
   if (!workflow) {
     return [
       ".github/workflows/agent-policy.yml is missing from the staged tree.",
     ];
   }
 
-  return [
+  const issues = [
     "name: agent-policy",
+    "fetch-depth: 0",
+    "permissions:",
+    "contents: read",
     "bun run agent-policy",
     "pull_request:",
-    "push:",
+    "DIFF_POLICY_MODE: range",
+    "DIFF_POLICY_BASE_REF:",
+    "DIFF_POLICY_HEAD_REF:",
   ]
     .filter((snippet) => !workflow.includes(snippet))
     .map(
       (snippet) =>
         `.github/workflows/agent-policy.yml must include "${snippet}".`,
     );
+
+  if (workflow.includes("push:")) {
+    issues.push(
+      ".github/workflows/agent-policy.yml must not trigger the required gate on push.",
+    );
+  }
+
+  return issues;
 }
 
 function getPreCommitWeakeningIssues(
-  readStagedFile: (path: string) => string | null,
+  readCurrentFile: (path: string) => string | null,
 ): string[] {
-  const preCommit = readStagedFile(".githooks/pre-commit");
+  const preCommit = readCurrentFile(".githooks/pre-commit");
   if (!preCommit) {
     return [".githooks/pre-commit is missing from the staged tree."];
   }
@@ -333,7 +349,7 @@ function getPreCommitWeakeningIssues(
 
 export function collectConfigWeakeningIssues(args: {
   stagedEntries: StagedEntry[];
-  readStagedFile: (path: string) => string | null;
+  readCurrentFile: (path: string) => string | null;
 }) {
   const ruleDeletions = args.stagedEntries
     .filter(
@@ -341,17 +357,17 @@ export function collectConfigWeakeningIssues(args: {
         entry.status.startsWith("D") && entry.path.startsWith("semgrep/rules/"),
     )
     .map((entry) => entry.path);
-  const missingRequiredRules = ensureRequiredRulesExist(args.readStagedFile);
+  const missingRequiredRules = ensureRequiredRulesExist(args.readCurrentFile);
   const issues = [
-    ...getPackageWeakeningIssues(args.readStagedFile),
-    ...getBiomeWeakeningIssues(args.readStagedFile),
-    ...getEslintWeakeningIssues(args.readStagedFile),
-    ...getTypedEslintWeakeningIssues(args.readStagedFile),
-    ...getDiffPolicyWeakeningIssues(args.readStagedFile),
-    ...getTsconfigWeakeningIssues(args.readStagedFile),
-    ...getPreCommitWeakeningIssues(args.readStagedFile),
-    ...getPrePushWeakeningIssues(args.readStagedFile),
-    ...getWorkflowWeakeningIssues(args.readStagedFile),
+    ...getPackageWeakeningIssues(args.readCurrentFile),
+    ...getBiomeWeakeningIssues(args.readCurrentFile),
+    ...getEslintWeakeningIssues(args.readCurrentFile),
+    ...getTypedEslintWeakeningIssues(args.readCurrentFile),
+    ...getDiffPolicyWeakeningIssues(args.readCurrentFile),
+    ...getTsconfigWeakeningIssues(args.readCurrentFile),
+    ...getPreCommitWeakeningIssues(args.readCurrentFile),
+    ...getPrePushWeakeningIssues(args.readCurrentFile),
+    ...getWorkflowWeakeningIssues(args.readCurrentFile),
     ...ruleDeletions.map(
       (path) => `Deleting Semgrep rule file ${path} weakens enforcement.`,
     ),

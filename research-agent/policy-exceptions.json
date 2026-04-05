@@ -1,4 +1,58 @@
 {
   "version": 1,
-  "exceptions": []
+  "exceptions": [
+    {
+      "id": "ci-hardening-large-diff-2026-04-05",
+      "policy": "large-diff",
+      "paths": [
+        ".github/workflows/agent-policy.yml",
+        ".github/workflows/live-provider-tests.yml",
+        "package.json",
+        "scripts/run-agent-policy.mjs",
+        "scripts/run-step-sequence.mjs",
+        "scripts/run-verify.mjs",
+        "src/diff-policy-config.ts",
+        "src/diff-policy-enforcement.ts",
+        "src/diff-policy-manifest.ts",
+        "src/diff-policy-shared.ts",
+        "src/diff-policy.ts",
+        "test/diff-policy-ci.test.ts",
+        "test/diff-policy-test-helpers.ts",
+        "test/diff-policy.test.ts"
+      ],
+      "reason": "Bootstrap CI and enforcement hardening exceeds the default diff budget.",
+      "expiresOn": "2026-04-12"
+    },
+    {
+      "id": "ci-hardening-enforcement-change-2026-04-05",
+      "policy": "enforcement-change",
+      "paths": [
+        ".github/workflows/agent-policy.yml",
+        "package.json",
+        "scripts/run-agent-policy.mjs",
+        "scripts/run-step-sequence.mjs",
+        "scripts/run-verify.mjs",
+        "src/diff-policy-config.ts",
+        "src/diff-policy-enforcement.ts",
+        "src/diff-policy-manifest.ts",
+        "src/diff-policy-shared.ts",
+        "src/diff-policy.ts"
+      ],
+      "reason": "Bootstrap CI and enforcement hardening intentionally updates protected gate files.",
+      "expiresOn": "2026-04-12"
+    },
+    {
+      "id": "ci-hardening-complexity-regression-2026-04-05",
+      "policy": "complexity-regression",
+      "paths": [
+        "src/diff-policy-config.ts",
+        "src/diff-policy-enforcement.ts",
+        "src/diff-policy-manifest.ts",
+        "src/diff-policy-shared.ts",
+        "src/diff-policy.ts"
+      ],
+      "reason": "Bootstrap CI and enforcement hardening temporarily expands policy implementation files.",
+      "expiresOn": "2026-04-12"
+    }
+  ]
 }

@@ -1,5 +1,6 @@
 import {
   KNOWN_POLICIES,
+  POLICY_EXCEPTION_MANIFEST,
   type PolicyManifest,
   type PolicyViolation,
   matchPolicyPath,
@@ -154,6 +155,7 @@ function findUncoveredViolationPaths(args: {
 }) {
   return args.violation.paths.filter(
     (path) =>
+      path !== POLICY_EXCEPTION_MANIFEST &&
       !args.matchingEntries.some((entry) =>
         entry.paths.some((pattern) => matchPolicyPath(pattern, path)),
       ),

@@ -22,11 +22,11 @@
     "lint:typed": "bunx eslint --config eslint.typed.config.mjs \"src/**/*.ts\" \"test/**/*.ts\"",
     "lint:semgrep": "semgrep scan --quiet --config semgrep/rules src test biome.json eslint.complexity.config.mjs package.json tsconfig.json .githooks",
     "test:semgrep": "semgrep test semgrep/rules",
-    "agent-policy": "bun run policy:diff && bun run verify && bun run lint:typed",
+    "agent-policy": "bun scripts/run-agent-policy.mjs",
     "policy:diff": "bun scripts/check-diff-policies.mjs",
     "format": "bunx biome check --write .",
     "typecheck": "bunx tsc -p tsconfig.json",
-    "verify": "printf 'Running Biome checks...\\n' && bunx biome check . && printf 'Running typecheck...\\n' && bun run typecheck && printf 'Running ESLint complexity gate...\\n' && bun run lint:complexity && printf 'Running Semgrep rule pack...\\n' && bun run lint:semgrep && printf 'Running test suite...\\n' && bun run test",
+    "verify": "bun scripts/run-verify.mjs",
     "prepare": "bun scripts/install-hooks.mjs"
   },
   "dependencies": {

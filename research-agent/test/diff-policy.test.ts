@@ -5,153 +5,12 @@ import {
   evaluateDiffPolicies,
   parsePolicyManifest,
 } from "../src/diff-policy.js";
-
-const validPackageJson = JSON.stringify({
-  scripts: {
-    "agent-policy":
-      "bun run policy:diff && bun run verify && bun run lint:typed",
-    "check:fast":
-      "printf 'Running Biome checks...\\n' && bunx biome check . && printf 'Running staged policy gate...\\n' && bun run policy:diff && printf 'Running ESLint complexity gate...\\n' && bun run lint:complexity",
-    "lint:complexity":
-      'bunx eslint --config eslint.complexity.config.mjs "src/**/*.ts" "test/**/*.ts"',
-    "lint:typed":
-      'bunx eslint --config eslint.typed.config.mjs "src/**/*.ts" "test/**/*.ts"',
-    "lint:semgrep":
-      "semgrep scan --quiet --config semgrep/rules src test biome.json eslint.complexity.config.mjs package.json tsconfig.json .githooks",
-    typecheck: "bunx tsc -p tsconfig.json",
-    test: "bun x --bun vitest run",
-    verify:
-      "printf 'Running Biome checks...\\n' && bunx biome check . && printf 'Running typecheck...\\n' && bun run typecheck && printf 'Running ESLint complexity gate...\\n' && bun run lint:complexity && printf 'Running Semgrep rule pack...\\n' && bun run lint:semgrep && printf 'Running test suite...\\n' && bun run test",
-  },
-});
-
-const validBiomeJson = JSON.stringify({
-  files: { ignore: ["node_modules", ".data", "coverage", "semgrep/rules"] },
-  linter: {
-    rules: {
-      complexity: { all: false },
-      style: { noNonNullAssertion: "error" },
-      suspicious: { noExplicitAny: "error" },
-    },
-  },
-});
-
-const validEslintConfig = `
-{
-  files: ["test/**/*.ts"],
-rules: {
-  complexity: ["error", 10],
-  "max-lines": ["error", { max: 400 }],
-  "max-lines-per-function": ["error", { max: 50 }],
-  "sonarjs/cognitive-complexity": ["error", 15],
-}
-}
-`;
-
-const validTypedEslintConfig = `
-...tseslint.configs.recommendedTypeChecked
-projectService: true
-"@typescript-eslint/no-explicit-any": "off"
-"@typescript-eslint/no-non-null-assertion": "off"
-`;
-
-const validPreCommit = `
-printf 'Running fast local gate...\\n'
-bun run check:fast
-`;
-
-const validPrePush = `
-printf 'Running full agent policy gate...\\n'
-bun run agent-policy
-`;
-
-const validWorkflow = `
-name: agent-policy
-pull_request:
-push:
-- main
-bun run agent-policy
-`;
-
-const validTsconfig = JSON.stringify({
-  compilerOptions: {
-    strict: true,
-    noEmit: true,
-  },
-  include: ["src/**/*.ts", "test/**/*.ts", "vitest.config.ts"],
-});
-
-const validDiffPolicyShared = `
-export const MAX_CHANGED_LINES = 150;
-export const MAX_CHANGED_FILES = 5;
-export const PROTECTED_PATHS = [
-  ".github/workflows/agent-policy.yml",
-  "eslint.typed.config.mjs",
-  ".githooks/pre-push",
-  "scripts/check-diff-policies.mjs",
-  "src/diff-policy.ts",
-  "src/diff-policy-complexity.ts",
-  "src/diff-policy-config.ts",
-  "src/diff-policy-enforcement.ts",
-  "src/diff-policy-manifest.ts",
-  "src/diff-policy-shared.ts",
-];
-export const REQUIRED_SEMGREP_RULES = [
-  "semgrep/rules/no-as-any.yml",
-];
-`;
-
-function withGitShow(map: Record<string, string | null>, run: () => void) {
-  const original = process.env["CODEX_TEST_GIT_SHOW_MAP"];
-  process.env["CODEX_TEST_GIT_SHOW_MAP"] = JSON.stringify(map);
-  try {
-    run();
-  } finally {
-    if (original === undefined) {
-      process.env["CODEX_TEST_GIT_SHOW_MAP"] = undefined;
-    } else {
-      process.env["CODEX_TEST_GIT_SHOW_MAP"] = original;
-    }
-  }
-}
-
-function withGitHead(map: Record<string, string | null>, run: () => void) {
-  const original = process.env["CODEX_TEST_GIT_HEAD_MAP"];
-  process.env["CODEX_TEST_GIT_HEAD_MAP"] = JSON.stringify(map);
-  try {
-    run();
-  } finally {
-    if (original === undefined) {
-      process.env["CODEX_TEST_GIT_HEAD_MAP"] = undefined;
-    } else {
-      process.env["CODEX_TEST_GIT_HEAD_MAP"] = original;
-    }
-  }
-}
-
-function makeValidGitShowMap(overrides?: Record<string, string | null>) {
-  return {
-    ".github/workflows/agent-policy.yml": validWorkflow,
-    "package.json": validPackageJson,
-    "biome.json": validBiomeJson,
-    "tsconfig.json": validTsconfig,
-    "eslint.typed.config.mjs": validTypedEslintConfig,
-    "eslint.complexity.config.mjs": validEslintConfig,
-    "src/diff-policy-shared.ts": validDiffPolicyShared,
-    ".githooks/pre-commit": validPreCommit,
-    ".githooks/pre-push": validPrePush,
-    "semgrep/rules/no-as-any.yml": "rules: []",
-    "semgrep/rules/no-config-weakening.yml": "rules: []",
-    "semgrep/rules/no-domain-to-infra-imports.yml": "rules: []",
-    "semgrep/rules/no-monkeypatching.yml": "rules: []",
-    "semgrep/rules/no-storage-to-adapter-imports.yml": "rules: []",
-    "semgrep/rules/no-suppression-comments.yml": "rules: []",
-    "semgrep/rules/no-temporal-to-service-imports.yml": "rules: []",
-    "semgrep/rules/no-tools-to-adapter-imports.yml": "rules: []",
-    "semgrep/rules/require-boundary-validation.yml": "rules: []",
-    ...overrides,
-  };
-}
+import {
+  makeRepoRootGitShowMap,
+  makeValidGitShowMap,
+  withGitHead,
+  withGitShow,
+} from "./diff-policy-test-helpers.js";
 
 test("accepts a small diff when enforcement files remain strong", () => {
   withGitShow(makeValidGitShowMap(), () => {
@@ -168,45 +27,19 @@ test("accepts a small diff when enforcement files remain strong", () => {
 });
 
 test("normalizes repo-root staged paths for research-agent files", () => {
-  withGitShow(
-    makeValidGitShowMap({
-      "research-agent/package.json": validPackageJson,
-      "research-agent/biome.json": validBiomeJson,
-      "research-agent/tsconfig.json": validTsconfig,
-      "research-agent/eslint.typed.config.mjs": validTypedEslintConfig,
-      "research-agent/eslint.complexity.config.mjs": validEslintConfig,
-      "research-agent/src/diff-policy-shared.ts": validDiffPolicyShared,
-      "research-agent/.githooks/pre-commit": validPreCommit,
-      "research-agent/.githooks/pre-push": validPrePush,
-      "research-agent/semgrep/rules/no-as-any.yml": "rules: []",
-      "research-agent/semgrep/rules/no-config-weakening.yml": "rules: []",
-      "research-agent/semgrep/rules/no-domain-to-infra-imports.yml":
-        "rules: []",
-      "research-agent/semgrep/rules/no-monkeypatching.yml": "rules: []",
-      "research-agent/semgrep/rules/no-storage-to-adapter-imports.yml":
-        "rules: []",
-      "research-agent/semgrep/rules/no-suppression-comments.yml": "rules: []",
-      "research-agent/semgrep/rules/no-temporal-to-service-imports.yml":
-        "rules: []",
-      "research-agent/semgrep/rules/no-tools-to-adapter-imports.yml":
-        "rules: []",
-      "research-agent/semgrep/rules/require-boundary-validation.yml":
-        "rules: []",
-    }),
-    () => {
-      const result = evaluateDiffPolicies({
-        stagedEntries: [{ status: "M", path: "research-agent/package.json" }],
-        diffStats: [
-          { path: "research-agent/package.json", added: 1, deleted: 0 },
-        ],
-        manifestRaw: null,
-        today: new Date("2026-04-04"),
-      });
+  withGitShow(makeRepoRootGitShowMap(), () => {
+    const result = evaluateDiffPolicies({
+      stagedEntries: [{ status: "M", path: "research-agent/package.json" }],
+      diffStats: [
+        { path: "research-agent/package.json", added: 1, deleted: 0 },
+      ],
+      manifestRaw: null,
+      today: new Date("2026-04-04"),
+    });
 
-      expect(result.violations).toEqual([]);
-      expect(result.manifestIssues).toEqual([]);
-    },
-  );
+    expect(result.violations).toEqual([]);
+    expect(result.manifestIssues).toEqual([]);
+  });
 });
 
 test("rejects a large diff without an exception", () => {
