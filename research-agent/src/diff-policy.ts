@@ -83,7 +83,11 @@ function normalizePolicyPath(path: string): string {
 }
 
 function resolveRepoPath(path: string): string {
-  if (path.startsWith(".github/") || path.startsWith(RESEARCH_AGENT_PREFIX)) {
+  if (
+    path === "lefthook.yml" ||
+    path.startsWith(".github/") ||
+    path.startsWith(RESEARCH_AGENT_PREFIX)
+  ) {
     return path;
   }
 

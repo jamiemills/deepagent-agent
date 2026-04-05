@@ -20,7 +20,7 @@
     "check:fast": "printf 'Running Biome checks...\\n' && bunx biome check . && printf 'Running staged policy gate...\\n' && bun run policy:diff && printf 'Running ESLint complexity gate...\\n' && bun run lint:complexity",
     "lint:complexity": "bunx eslint --config eslint.complexity.config.mjs \"src/**/*.ts\" \"test/**/*.ts\"",
     "lint:typed": "bunx eslint --config eslint.typed.config.mjs \"src/**/*.ts\" \"test/**/*.ts\"",
-    "lint:semgrep": "semgrep scan --quiet --config semgrep/rules src test biome.json eslint.complexity.config.mjs package.json tsconfig.json .githooks",
+    "lint:semgrep": "semgrep scan --quiet --config semgrep/rules src test ../lefthook.yml biome.json eslint.complexity.config.mjs eslint.typed.config.mjs package.json tsconfig.json scripts",
     "test:semgrep": "semgrep test semgrep/rules",
     "agent-policy": "bun scripts/run-agent-policy.mjs",
     "policy:diff": "bun scripts/check-diff-policies.mjs",
@@ -60,6 +60,7 @@
     "eslint-plugin-sonarjs": "^4.0.2",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.58.0",
-    "vitest": "^4.1.2"
+    "vitest": "^4.1.2",
+    "lefthook": "^1.12.3"
   }
 }

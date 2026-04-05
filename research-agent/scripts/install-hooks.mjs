@@ -6,6 +6,12 @@ import { fileURLToPath } from "node:url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, "..");
+const lefthookBinary = path.join(
+  projectRoot,
+  "node_modules",
+  ".bin",
+  process.platform === "win32" ? "lefthook.cmd" : "lefthook",
+);
 
 const gitRoot = findGitRoot(projectRoot);
 if (!gitRoot) {
@@ -15,30 +21,42 @@ if (!gitRoot) {
   process.exit(0);
 }
 
-const hooksPath =
-  path.relative(gitRoot, path.join(projectRoot, ".githooks")) || ".githooks";
-
-try {
-  execFileSync("git", ["config", "core.hooksPath", hooksPath], {
-    cwd: gitRoot,
-    stdio: "inherit",
-  });
-  console.log(`[prepare] Configured core.hooksPath=${hooksPath}`);
-} catch (error) {
-  console.warn("[prepare] Failed to configure Git hooks path.");
-  if (error instanceof Error) {
-    console.warn(error.message);
+function runGitConfigUnset() {
+  try {
+    execFileSync("git", ["config", "--unset", "core.hooksPath"], {
+      cwd: gitRoot,
+      stdio: "inherit",
+    });
+  } catch (_error) {
+    // ignore failure; hooks path may already be default
   }
 }
 
+function installLefthook() {
+  try {
+    execFileSync(lefthookBinary, ["install"], {
+      cwd: gitRoot,
+      stdio: "inherit",
+    });
+    console.log("[prepare] Installed Lefthook hooks.");
+  } catch (error) {
+    console.error("[prepare] Lefthook install failed.");
+    if (error instanceof Error) {
+      console.error(error.message);
+    }
+    process.exit(1);
+  }
+}
+
+runGitConfigUnset();
+installLefthook();
+
 function findGitRoot(startDir) {
   let current = startDir;
-
   while (true) {
     if (fs.existsSync(path.join(current, ".git"))) {
       return current;
     }
-
     const parent = path.dirname(current);
     if (parent === current) {
       return null;

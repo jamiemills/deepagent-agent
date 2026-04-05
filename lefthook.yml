@@ -1,0 +1,15 @@
+lefthook: |
+  cd research-agent
+  bunx lefthook
+
+pre-commit:
+  commands:
+    fast:
+      root: research-agent
+      run: bun run check:fast
+
+pre-push:
+  commands:
+    full:
+      root: research-agent
+      run: bun run agent-policy
