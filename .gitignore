@@ -1,1 +1,6 @@
 .env
+secrets.enc.env
+.env.local
+.env.development
+.env.production
+.env.test
